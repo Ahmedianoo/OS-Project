@@ -69,6 +69,16 @@ void destroyClk(bool terminateAll)
 
 
 
+enum algorithms{
+  HELPER, 
+  HPF, 
+  SRTN, 
+  RR  
+};
+
+
+
+
 
 #ifndef PCB_H
 #define PCB_H
