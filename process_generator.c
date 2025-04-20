@@ -1,5 +1,8 @@
 #include "headers.h"
 
+
+#define MAXPROCESSES 100
+
 void clearResources(int);
 
 int main(int argc, char * argv[])
@@ -7,6 +10,32 @@ int main(int argc, char * argv[])
     signal(SIGINT, clearResources);
     // TODO Initialization
     // 1. Read the input files.
+    PCB processes[MAXPROCESSES];
+    FILE* file = fopen("processes.txt", "r");
+
+    if (file == NULL) { 
+        perror("Error opening file");
+        return 1;
+    }
+
+    char line[100];
+    fgets(line, sizeof(line), file);  //skipping the first line in the text file
+
+    int noOfProcesses = 0;
+    while(fscanf(file, "%d  %d  %d  %d", 
+            &processes[noOfProcesses].processID, 
+            &processes[noOfProcesses].arrivalTime, 
+            &processes[noOfProcesses].runtime, 
+            &processes[noOfProcesses].processPriority) == 4)
+    {
+        processes[noOfProcesses].remainingTime = processes[noOfProcesses].runtime;
+        noOfProcesses++;
+    }
+
+    for(int i = 0; i < noOfProcesses; i++){
+        printf("%d %d\n", processes[i].processID, processes[i].arrivalTime);
+    }
+
     // 2. Ask the user for the chosen scheduling algorithm and its parameters, if there are any.
     // 3. Initiate and create the scheduler and clock processes.
     // 4. Use this function after creating the clock process to initialize clock
