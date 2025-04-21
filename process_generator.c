@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
     if (schedulerID == 0)
     {
         printf("I am the schedular with PID: %d\n", getpid());
-        execl("./OS-Project/schedular", "schedular", "I am the schedular, the process manager has just created me", NULL);
+        execl("scheduler", "scheduler", "I am the schedular, the process manager has just created me", NULL);
         return 0;
     }
     else if (schedulerID == -1)
@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    clockID = fork();
+    pid_t clockID = fork();
     if (clockID == 0)
     {
         printf("I am the clock with PID: %d\n", getpid());
