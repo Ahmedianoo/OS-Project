@@ -4,7 +4,6 @@
 
 void clearResources(int);
 int toSchedulerQId;
-pid_t clockID;
 void InitComGentoScheduler()
 {
     toSchedulerQId = msgget(schedulerQKey, 0666 | IPC_CREAT);
@@ -86,7 +85,7 @@ int main(int argc, char *argv[])
 
     // 3. Initiate and create the scheduler and clock processes.
 
-        pid_t schedulerID = fork();
+    pid_t schedulerID = fork();
     if (schedulerID == 0)
     {
         printf("I am the schedular with PID: %d\n", getpid());
@@ -133,7 +132,7 @@ int main(int argc, char *argv[])
 
 void clearResources(int signum)
 {
-    kill(SIGINT, clockID);
+    destroyClk(true);
     // TODO Clears all resources in case of interruption
     if (msgctl(toSchedulerQId, IPC_RMID, NULL) == -1)
     {
