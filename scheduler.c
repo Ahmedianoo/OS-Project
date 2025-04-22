@@ -1,4 +1,5 @@
 #include "headers.h"
+#include "circularqueue.h"
 
 int fromPGenQId;
 void InitComGentoScheduler()
@@ -9,6 +10,8 @@ void InitComGentoScheduler()
         perror("process gen to scheduler msg Q");
     }
 }
+
+struct circularqueue myQ;
 msgbuff RecieveProcess()
 {
     struct msgbuff myMsg;
@@ -22,8 +25,10 @@ int main(int argc, char *argv[])
     printf("\nhello\n");
     initClk();
     InitComGentoScheduler();
-
+    
+    initQueue(&myQ);
     struct msgbuff myMsg;
+
     while (true)
     {
 
@@ -31,5 +36,7 @@ int main(int argc, char *argv[])
         printf("\n recieved process with id: %d\n", myMsg.data.processID);
     }
     // TODO implement the scheduler :)
+    //Round Robin
+
     // upon termination release the clock resources
 }
