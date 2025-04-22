@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
     scanf("%d", &alg_choice);
     algorithm = (enum algorithms)alg_choice;
 
-    if (algorithm < 0 || algorithm > 2)
+    if (algorithm < 1 || algorithm > 3)
     {
         printf("Invalid choice. Exiting.\n");
         return 1;
@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
     else if (schedulerID == -1)
     {
         printf("\nError in forking the schedular. PID: %d\n", getpid());
-        perror("fork failed");
+        perror("fork failed\n");
         exit(1);
     }
 
@@ -127,14 +127,14 @@ int main(int argc, char *argv[])
     if (clockID == 0)
     {
         printf("I am the clock with PID: %d\n", getpid());
-        execl("clk", "clk", "I am the clock, the process manager has just created me", NULL);
-        perror("execl failed");
+        execl("clk", "clk", "I am the clock, the process manager has just created me\n", NULL);
+        perror("execl failed\n");
         exit(-1);
     }
     else if (clockID == -1)
     {
         printf("\nError in forking the clockID. PID: %d\n", getpid());
-        perror("fork failed");
+        perror("fork failed\n");
         exit(1);
     }
 
@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
 
     while (true)
     {
-        printf("process gen is done");
+        printf("process gen is done\n");
         sleep(1);
     }
     // TODO Generation Main Loop
