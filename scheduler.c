@@ -11,7 +11,7 @@ void InitComGentoScheduler()
     }
 }
 
-struct circularqueue myQ;
+struct CircularQueue myQ;
 msgbuff RecieveProcess()
 {
     struct msgbuff myMsg;
@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     printf("\nhello\n");
     initClk();
     InitComGentoScheduler();
-    
+
     initQueue(&myQ);
     struct msgbuff myMsg;
 
@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
         printf("\n recieved process with id: %d\n", myMsg.data.processID);
     }
     // TODO implement the scheduler :)
-    //Round Robin
+    // Round Robin
 
     // upon termination release the clock resources
 }

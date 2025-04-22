@@ -9,34 +9,13 @@
 #include <sys/sem.h>
 #include <stdlib.h>
 
-typedef struct PCB
-{
-    int processID;    // Logical ID (from processes.txt)
-    pid_t processPID; // Actual OS-level PID from fork()
-
-    int processPriority; // For HPF (lower = higher priority)
-
-    int arrivalTime;   // Time process enters the system
-    int runtime;       // Total time needed to finish
-    int remainingTime; // Required for preemptive algorithms like SRTN
-
-    int startTime;    // When the process actually starts
-    int finishTime;   // When it ends
-    int LastExecTime; // Used in RR to calculate time slices
-    int last_scheduled_time;
-
-    int waitingTime;              // Total time in ready queue
-    int turnAroundTime;           // finishTime - arrivalTime
-    float weightedTurnAroundTime; // WTA = TA / runtime
-} PCB;
-
 typedef struct QueueNode
 {
     PCB data;
     struct QueueNode *next;
 } QueueNode;
 
-typedef struct
+typedef struct CircularQueue
 {
     QueueNode *tail;    // tail->next is the head
     QueueNode *current; // pointer to "currently running" process
