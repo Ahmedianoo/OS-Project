@@ -1,3 +1,4 @@
+
 #include <stdio.h> //if you don't use scanf/printf change this include
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -17,7 +18,7 @@ typedef short bool;
 
 #define SHKEY 300
 
-#define schedulerQKey 1234
+#define ProcessGenToSchedulerQKey 1234
 
 ///==============================
 // don't mess with this variable//
