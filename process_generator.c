@@ -2,30 +2,52 @@
 
 #define MAXPROCESSES 100
 
-void clearResources(int);
 int toSchedulerQId;
-pid_t clockID;
+pid_t schedulerID;
+
+void clearResources(int signum)
+{
+
+    // destroyClk(true);
+    //  TODO Clears all resources in case of interruption
+    if (msgctl(toSchedulerQId, IPC_RMID, NULL) == -1)
+    {
+        perror("msgctl - IPC_RMID");
+    }
+    else
+    {
+        printf("Scheduler Message queue removed successfully.\n");
+    }
+    destroyClk(true);
+    exit(1);
+}
+
 void InitComGentoScheduler()
 {
-    toSchedulerQId = msgget(schedulerQKey, 0666 | IPC_CREAT);
+    toSchedulerQId = msgget(ProcessGenToSchedulerQKey, 0666 | IPC_CREAT);
     if (toSchedulerQId == -1)
     {
         perror("process gen to scheduler msg Q");
     }
 }
-void SendToScheduler(PCB dataToSend, long mtype)
+
+void SendToScheduler(PCB dataToSend)
 {
     struct msgbuff msg;
-    msg.mtype = mtype; // can hardcode the type to the type of the scheduler but for later
+    msg.mtype = schedulerID % 10000; // can hardcode the type to the type of the scheduler but for later
     msg.data = dataToSend;
-    msgsnd(toSchedulerQId, &msg, sizeof(msg.data), !IPC_NOWAIT);
+    if (msgsnd(toSchedulerQId, &msg, sizeof(msg.data), !IPC_NOWAIT) == -1)
+    {
+        perror("msgsnd failed");
+    }
 }
 
 int main(int argc, char *argv[])
 {
-    setbuf(stdout, NULL);
+    setvbuf(stdout, NULL, _IONBF, 0);
     signal(SIGINT, clearResources);
     InitComGentoScheduler();
+
     // TODO Initialization
     // 1. Read the input files.
     PCB processes[MAXPROCESSES];
@@ -86,11 +108,12 @@ int main(int argc, char *argv[])
 
     // 3. Initiate and create the scheduler and clock processes.
 
-        pid_t schedulerID = fork();
+    schedulerID = fork();
     if (schedulerID == 0)
     {
         printf("I am the schedular with PID: %d\n", getpid());
-        execl("./OS-Project/schedular", "schedular", "I am the schedular, the process manager has just created me", NULL);
+        execl("scheduler", "scheduler", "I am the schedular, the process manager has just created me", NULL);
+        perror("execl failed");
         return 0;
     }
     else if (schedulerID == -1)
@@ -100,7 +123,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    clockID = fork();
+    pid_t clockID = fork();
     if (clockID == 0)
     {
         printf("I am the clock with PID: %d\n", getpid());
@@ -118,30 +141,27 @@ int main(int argc, char *argv[])
     // 4. Use this function after creating the clock process to initialize clock
     initClk();
     // To get time use this
+    int x, sent = 0;
+    while (sent < noOfProcesses)
+    {
+        x = getClk();
+
+        while (sent < noOfProcesses && processes[sent].arrivalTime <= x)
+        {
+            SendToScheduler(processes[sent]);
+            sent++;
+        }
+
+        // sleep(1);  // or a shorter delay if needed
+    }
 
     while (true)
     {
-        int x = getClk();
-        printf("current time is %d\n", x);
+        printf("process gen is done");
+        sleep(1);
     }
     // TODO Generation Main Loop
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
     // 7. Clear clock resources
-    destroyClk(true);
-}
-
-void clearResources(int signum)
-{
-    kill(SIGINT, clockID);
-    // TODO Clears all resources in case of interruption
-    if (msgctl(toSchedulerQId, IPC_RMID, NULL) == -1)
-    {
-        perror("msgctl - IPC_RMID");
-    }
-    else
-    {
-        printf("Message Up queue removed successfully.\n");
-    }
-    exit(1);
 }
