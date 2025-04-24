@@ -1,4 +1,6 @@
 #include "headers.h"
+#include "helpers.h"
+
 
 #define MAXPROCESSES 100
 
@@ -87,11 +89,12 @@ int main(int argc, char *argv[])
     scanf("%d", &alg_choice);
     algorithm = (enum algorithms)alg_choice;
 
-    if (algorithm < 0 || algorithm > 2)
+    if (algorithm < 1 || algorithm > 3)
     {
         printf("Invalid choice. Exiting.\n");
         return 1;
     }
+
 
     switch (algorithm)
     {
@@ -112,7 +115,7 @@ int main(int argc, char *argv[])
     if (schedulerID == 0)
     {
         printf("I am the schedular with PID: %d\n", getpid());
-        execl("scheduler", "scheduler", "I am the schedular, the process manager has just created me", NULL);
+        execl("./scheduler.out", "scheduler", algorithmToString(algorithm), "I am the schedular, the process manager has just created me", NULL);
         perror("execl failed");
         return 0;
     }
@@ -127,7 +130,7 @@ int main(int argc, char *argv[])
     if (clockID == 0)
     {
         printf("I am the clock with PID: %d\n", getpid());
-        execl("clk", "clk", "I am the clock, the process manager has just created me", NULL);
+        execl("./clk.out", "clk", "I am the clock, the process manager has just created me", NULL);
         perror("execl failed");
         exit(-1);
     }
@@ -147,7 +150,9 @@ int main(int argc, char *argv[])
         x = getClk();
 
         while (sent < noOfProcesses && processes[sent].arrivalTime <= x)
-        {
+        {   
+            processes[sent].processPID = -1;
+            processes[sent].processPPID = getpid();
             SendToScheduler(processes[sent]);
             sent++;
         }
@@ -157,7 +162,7 @@ int main(int argc, char *argv[])
 
     while (true)
     {
-        printf("process gen is done");
+        printf("process gen is done\n");
         sleep(1);
     }
     // TODO Generation Main Loop
