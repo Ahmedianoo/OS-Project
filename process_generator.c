@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
     else if (schedulerID == -1)
     {
         printf("\nError in forking the schedular. PID: %d\n", getpid());
-        perror("fork failed");
+        perror("fork failed\n");
         exit(1);
     }
 
@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
     else if (clockID == -1)
     {
         printf("\nError in forking the clockID. PID: %d\n", getpid());
-        perror("fork failed");
+        perror("fork failed\n");
         exit(1);
     }
 

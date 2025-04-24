@@ -192,5 +192,7 @@ int main(int argc, char *argv[])
 
     }
     // TODO implement the scheduler :)
+    // Round Robin
+
     // upon termination release the clock resources
 }
