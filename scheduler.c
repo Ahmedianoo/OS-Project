@@ -2,7 +2,9 @@
 #include "SRTNQueue.h"
 #include "circularqueue.h"
 
+enum algorithms algorithm;
 PCB runningProcess;
+PCB *currentProcess;
 
 void processFinished_handler(int signum)
 {
@@ -17,8 +19,17 @@ void processFinished_handler(int signum)
     else if (WIFEXITED(stat_loc))
     {
         int index = WEXITSTATUS(stat_loc);
-        runningProcess.finishTime = getClk();
-        printf("process #%d has started at time %d and finished at %d.\n", pid, runningProcess.startTime, runningProcess.finishTime);
+        if (algorithm = RR)
+        {
+            currentProcess->finishTime = getClk();
+            printf("process #%d has started at time %d and finished at %d.\n", pid, currentProcess->startTime, currentProcess->finishTime);
+        }
+        else
+        {
+
+            runningProcess.finishTime = getClk();
+            printf("process #%d has started at time %d and finished at %d.\n", pid, runningProcess.startTime, runningProcess.finishTime);
+        }
         // killpg(getpgrp(), SIGKILL);
     }
 
@@ -149,12 +160,12 @@ void SRTN_algo()
 void RR_algo()
 {
     int Quantum = 1;
-    //char remaining_str[10];
+    // char remaining_str[10];
     int processesCount = 0;
-    //int startQuantum = 0;
+    // int startQuantum = 0;
     struct CircularQueue myQ;
     initQueue(&myQ);
-    PCB *currentProcess;
+
     bool success = 0;
     // PCB newProcess = RecieveProcess(success);
     while (true)
@@ -162,15 +173,17 @@ void RR_algo()
         struct msgbuff myMsg = RecieveProcess(&success);
         if (success)
         {
-            printf("\n recieved process with id: %d\n", myMsg.data.processID);
+            printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
             enqueueCirc(&myQ, myMsg.data);
-            //sprintf(remaining_str, "%d", myMsg.data.remainingTime);
+            // sprintf(remaining_str, "%d", myMsg.data.remainingTime);
             processesCount++;
+            rotate(&myQ);
         }
         if (processesCount > 0)
         {
-            printQueue(&myQ);
+            // printQueue(&myQ);
             currentProcess = peekCurrent(&myQ);
+            printf("at clock : %d ,process ID :%d will run to clock %d\n", getClk(), currentProcess->processID, getClk() + 1);
             if (currentProcess->isFirstRun)
             {
                 currentProcess->startTime = getClk();
@@ -191,16 +204,14 @@ void RR_algo()
             {
                 kill(currentProcess->processPID, SIGCONT);
             }
-            printf("Current=%d, Remaining: %d, Id=%d\n",currentProcess->processPID,currentProcess->remainingTime,currentProcess->processID);
             int startQuantum = getClk();
             while (getClk() - startQuantum < Quantum)
             {
-                //busy wait
+                // busy wait
             }
-            
 
-            currentProcess->remainingTime-=Quantum;
-            printQueue(&myQ);
+            currentProcess->remainingTime -= Quantum;
+            printf("Current PID=%d, Remaining: %d, Id=%d\n\n", currentProcess->processID, currentProcess->remainingTime, currentProcess->processPID);
             if (currentProcess->remainingTime <= 0)
             {
                 printf("Process %d finished!\n", currentProcess->processID);
@@ -211,15 +222,13 @@ void RR_algo()
             }
             else
             {
-                printf("Fuck\n");
                 kill(currentProcess->processPID, SIGSTOP);
                 rotate(&myQ);
             }
-            if(processesCount==0)
+            if (processesCount == 0)
             {
                 break;
             }
-            //printQueue(&myQ);
         }
     }
 }
@@ -231,8 +240,6 @@ int main(int argc, char *argv[])
     initClk();
     InitComGentoScheduler();
     signal(SIGUSR1, processFinished_handler);
-
-    enum algorithms algorithm;
 
     algorithm = atoi(argv[1]);
     while (true)

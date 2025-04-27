@@ -9,7 +9,8 @@ pid_t schedulerID;
 void clearResources(int signum)
 {
 
-    // destroyClk(true);
+    destroyClk(true);
+    printf("clock destroyed  successfully");
     //  TODO Clears all resources in case of interruption
     if (msgctl(toSchedulerQId, IPC_RMID, NULL) == -1)
     {
@@ -19,7 +20,6 @@ void clearResources(int signum)
     {
         printf("Scheduler Message queue removed successfully.\n");
     }
-    destroyClk(true);
     exit(1);
 }
 
@@ -144,12 +144,14 @@ int main(int argc, char *argv[])
     initClk();
     // To get time use this
     int x, sent = 0;
+    setvbuf(stdout, NULL, _IONBF, 0);
     while (sent < noOfProcesses)
     {
         x = getClk();
 
         while (sent < noOfProcesses && processes[sent].arrivalTime <= x)
         {
+            printf("\nclock at send %d\n", x);
             processes[sent].processPID = -1;
             processes[sent].processPPID = getpid();
             SendToScheduler(processes[sent]);
@@ -161,12 +163,12 @@ int main(int argc, char *argv[])
 
     while (true)
     {
-        //printf("process gen is done\n");
+        // printf("process gen is done\n");
         sleep(1);
     }
     // TODO Generation Main Loop
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
     // 7. Clear clock resources
-    //wait(&status);
+    // wait(&status);
 }
