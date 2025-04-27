@@ -148,11 +148,10 @@ void SRTN_algo()
 
 void RR_algo()
 {
-    setvbuf(stdout, NULL, _IONBF, 0);
     int Quantum = 1;
-    char remaining_str[10];
+    //char remaining_str[10];
     int processesCount = 0;
-    int startQuantum = 0;
+    //int startQuantum = 0;
     struct CircularQueue myQ;
     initQueue(&myQ);
     PCB *currentProcess;
@@ -160,17 +159,13 @@ void RR_algo()
     // PCB newProcess = RecieveProcess(success);
     while (true)
     {
-
-        if (true)
+        struct msgbuff myMsg = RecieveProcess(&success);
+        if (success)
         {
-            struct msgbuff myMsg = RecieveProcess(&success);
-            if (success)
-            {
-                printf("\n recieved process with id: %d\n", myMsg.data.processID);
-                enqueueCirc(&myQ, myMsg.data);
-                sprintf(remaining_str, "%d", currentProcess->remainingTime);
-                processesCount++;
-            }
+            printf("\n recieved process with id: %d\n", myMsg.data.processID);
+            enqueueCirc(&myQ, myMsg.data);
+            //sprintf(remaining_str, "%d", myMsg.data.remainingTime);
+            processesCount++;
         }
         if (processesCount > 0)
         {
@@ -180,6 +175,10 @@ void RR_algo()
             {
                 currentProcess->startTime = getClk();
                 currentProcess->isFirstRun = false;
+
+                char remaining_str[10];
+                sprintf(remaining_str, "%d", currentProcess->remainingTime);
+
                 currentProcess->processPID = fork();
                 if (currentProcess->processPID == 0)
                 {
@@ -192,12 +191,35 @@ void RR_algo()
             {
                 kill(currentProcess->processPID, SIGCONT);
             }
-            startQuantum = getClk();
-            if (getClk() - startQuantum >= Quantum)
+            printf("Current=%d, Remaining: %d, Id=%d\n",currentProcess->processPID,currentProcess->remainingTime,currentProcess->processID);
+            int startQuantum = getClk();
+            while (getClk() - startQuantum < Quantum)
             {
-                kill(runningProcess.processID, SIGSTOP);
+                //busy wait
             }
-            rotate(&myQ);
+            
+
+            currentProcess->remainingTime-=Quantum;
+            printQueue(&myQ);
+            if (currentProcess->remainingTime <= 0)
+            {
+                printf("Process %d finished!\n", currentProcess->processID);
+                kill(currentProcess->processPID, SIGTERM);
+                waitpid(currentProcess->processPID, NULL, 0);
+                removeCurrent(&myQ);
+                processesCount--;
+            }
+            else
+            {
+                printf("Fuck\n");
+                kill(currentProcess->processPID, SIGSTOP);
+                rotate(&myQ);
+            }
+            if(processesCount==0)
+            {
+                break;
+            }
+            //printQueue(&myQ);
         }
     }
 }

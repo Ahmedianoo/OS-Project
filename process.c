@@ -6,7 +6,7 @@ int remainingtime;
 int main(int agrc, char * argv[])
 {
     initClk();
-
+    
     if (agrc < 2) {
         fprintf(stderr, "Missing argument for remaining time\n");
         exit(1);
@@ -16,6 +16,7 @@ int main(int agrc, char * argv[])
     remainingtime = atoi(argv[1]);
     while (remainingtime > 0)
     {
+        printf("Remaining Time from process %d: %d\n",getpid(),remainingtime);
         waitclk();      //this function is defined in the header file and it waits for the clock tik
         remainingtime--;
     }

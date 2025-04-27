@@ -159,15 +159,14 @@ int main(int argc, char *argv[])
         // sleep(1);  // or a shorter delay if needed
     }
 
-    // while (true)
-    // {
-    //     // printf("process gen is done\n");
-    //     // sleep(5);
-    // }
+    while (true)
+    {
+        //printf("process gen is done\n");
+        sleep(1);
+    }
     // TODO Generation Main Loop
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
     // 7. Clear clock resources
-    int status;
-    wait(&status);
+    //wait(&status);
 }
