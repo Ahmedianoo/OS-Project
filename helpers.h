@@ -1,7 +1,5 @@
 #include <sys/types.h> // Needed for pid_t
 
-
-
 enum algorithms
 {
     HELPER,
@@ -12,9 +10,10 @@ enum algorithms
 
 typedef struct PCB
 {
-    int processID;    // Logical ID (from processes.txt)
+    int processID;                 // Logical ID (from processes.txt)
     pid_t processPID, processPPID; // Actual OS-level PID from fork()
 
+    bool isFirstRun;
 
     int processPriority; // For HPF (lower = higher priority)
 
@@ -38,12 +37,17 @@ typedef struct msgbuff
     PCB data;   // The actual PCB to send
 } msgbuff;
 
-
-const char* algorithmToString(enum algorithms algo) {
-    switch (algo) {
-        case HPF: return "1";
-        case SRTN: return "2";
-        case RR: return "3";
-        default: return "0";
+const char *algorithmToString(enum algorithms algo)
+{
+    switch (algo)
+    {
+    case HPF:
+        return "1";
+    case SRTN:
+        return "2";
+    case RR:
+        return "3";
+    default:
+        return "0";
     }
 }

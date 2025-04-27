@@ -1,7 +1,6 @@
 #include "headers.h"
 #include "helpers.h"
 
-
 #define MAXPROCESSES 100
 
 int toSchedulerQId;
@@ -72,6 +71,7 @@ int main(int argc, char *argv[])
                   &processes[noOfProcesses].processPriority) == 4)
     {
         processes[noOfProcesses].remainingTime = processes[noOfProcesses].runtime;
+        processes[noOfProcesses].isFirstRun = true;
         noOfProcesses++;
     }
 
@@ -95,7 +95,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-
     switch (algorithm)
     {
     case RR:
@@ -115,8 +114,8 @@ int main(int argc, char *argv[])
     if (schedulerID == 0)
     {
         printf("I am the schedular with PID: %d\n", getpid());
-        execl("./scheduler.out", "scheduler", algorithmToString(algorithm), "I am the schedular, the process manager has just created me", NULL);
-        perror("execl failed");
+        execl("./scheduler", "scheduler", algorithmToString(algorithm), "I am the schedular, the process manager has just created me", NULL);
+        perror("execl failed: check file name");
         return 0;
     }
     else if (schedulerID == -1)
@@ -130,8 +129,8 @@ int main(int argc, char *argv[])
     if (clockID == 0)
     {
         printf("I am the clock with PID: %d\n", getpid());
-        execl("./clk.out", "clk", "I am the clock, the process manager has just created me", NULL);
-        perror("execl failed");
+        execl("./clk", "clk", "I am the clock, the process manager has just created me", NULL);
+        perror("execl failed: check file name");
         exit(-1);
     }
     else if (clockID == -1)
@@ -150,7 +149,7 @@ int main(int argc, char *argv[])
         x = getClk();
 
         while (sent < noOfProcesses && processes[sent].arrivalTime <= x)
-        {   
+        {
             processes[sent].processPID = -1;
             processes[sent].processPPID = getpid();
             SendToScheduler(processes[sent]);
@@ -160,13 +159,15 @@ int main(int argc, char *argv[])
         // sleep(1);  // or a shorter delay if needed
     }
 
-    while (true)
-    {
-        printf("process gen is done\n");
-        sleep(1);
-    }
+    // while (true)
+    // {
+    //     // printf("process gen is done\n");
+    //     // sleep(5);
+    // }
     // TODO Generation Main Loop
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
     // 7. Clear clock resources
+    int status;
+    wait(&status);
 }
