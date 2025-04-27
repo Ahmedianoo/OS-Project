@@ -181,8 +181,10 @@ void RR_algo()
         }
         if (processesCount > 0)
         {
+
             // printQueue(&myQ);
             currentProcess = peekCurrent(&myQ);
+
             printf("at clock : %d ,process ID :%d will run to clock %d\n", getClk(), currentProcess->processID, getClk() + 1);
             if (currentProcess->isFirstRun)
             {
@@ -199,6 +201,7 @@ void RR_algo()
                     perror("execl failed: check file name");
                     exit(-1);
                 }
+                // kill(currentProcess->processPID, SIGUSR2);
             }
             else
             {
@@ -215,8 +218,8 @@ void RR_algo()
             if (currentProcess->remainingTime <= 0)
             {
                 printf("Process %d finished!\n", currentProcess->processID);
-                kill(currentProcess->processPID, SIGTERM);
                 waitpid(currentProcess->processPID, NULL, 0);
+                printf("process %d , started at  %d ,finished at %d\n\n", currentProcess->processPID, currentProcess->startTime, currentProcess->finishTime);
                 removeCurrent(&myQ);
                 processesCount--;
             }

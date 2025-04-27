@@ -3,8 +3,15 @@
 /* Modify this file as needed*/
 int remainingtime;
 
+// void sigusr2handler()
+// {
+//     printf("got signaled i am %d", getpid());
+// }
+
 int main(int agrc, char *argv[])
 {
+    // setvbuf(stdout, NULL, _IONBF, 0);
+    // signal(SIGUSR2, sigusr2handler);
     initClk();
 
     if (agrc < 2)
@@ -17,10 +24,9 @@ int main(int agrc, char *argv[])
     remainingtime = atoi(argv[1]);
     while (remainingtime > 0)
     {
-
+        printf("Remaining Time from process %d: %d\n", getpid(), remainingtime);
         waitclk(); // this function is defined in the header file and it waits for the clock tik
         remainingtime--;
-        printf("Remaining Time from process %d: %d\n", getpid(), remainingtime);
     }
     // signal the scheduler to tell him you finished
     kill(getppid(), SIGUSR1);
