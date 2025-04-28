@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
     if (schedulerID == 0)
     {
         printf("I am the schedular with PID: %d\n", getpid());
-        execl("./scheduler", "scheduler", algorithmToString(algorithm), "I am the schedular, the process manager has just created me", NULL);
+        execl("./scheduler.out", "scheduler", algorithmToString(algorithm), "I am the schedular, the process manager has just created me", NULL);
         perror("execl failed: check file name");
         return 0;
     }
@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
     if (clockID == 0)
     {
         printf("I am the clock with PID: %d\n", getpid());
-        execl("./clk", "clk", "I am the clock, the process manager has just created me", NULL);
+        execl("./clk.out", "clk", "I am the clock, the process manager has just created me", NULL);
         perror("execl failed: check file name");
         exit(-1);
     }
