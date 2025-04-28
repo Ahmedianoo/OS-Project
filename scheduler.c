@@ -83,7 +83,7 @@ void SRTN_algo(){
 
 
     while(true){
-
+        
         if(first){
             first = 0;
             if(runningProcess.remainingTime > 0){
@@ -91,7 +91,7 @@ void SRTN_algo(){
                 sprintf(remaining_str, "%d", runningProcess.remainingTime);
                 runningProcess.processPID = fork();
                 runningProcess.startTime = getClk();
-                pStart = getClk();
+                pStart = runningProcess.startTime;
 
                 if (runningProcess.processPID == 0) {
                     execl("./process.out", "process", remaining_str,NULL);
@@ -104,16 +104,31 @@ void SRTN_algo(){
             myMsg = RecieveProcess(&success);
             if(success && myMsg.data.arrivalTime <= getClk()){
 
-
+                //printf("i am here in the srtn\n");
                 recProcess = myMsg.data;
                 enqueue(readyQueue, recProcess);
+                //printf("i am here after the enqueue with id %d\n", recProcess.processID);
                 if(readyQueue->head->data.remainingTime < runningProcess.remainingTime || runningProcess.remainingTime == 0){
-    
-                    runningProcess.remainingTime = runningProcess.remainingTime - (getClk() - pStart);
-                    runningProcess.last_scheduled_time = getClk();
-                    kill(runningProcess.processID, SIGSTOP);
-                    enqueue(readyQueue, runningProcess);
-                    runningProcess = dequeue(readyQueue);
+                    //printf("i am here after the enqueue with id %d, i have remaining time %d, the pstart %d\n", recProcess.processID, recProcess.remainingTime, pStart);
+                    int tempclk = getClk();
+                    //rintf("i am the running process %d\n", runningProcess.processID);
+
+
+                    if(runningProcess.finishTime ==  -1){
+                        runningProcess.remainingTime = runningProcess.remainingTime - (tempclk - pStart);
+                        runningProcess.last_scheduled_time = tempclk;
+                        kill(runningProcess.processID, SIGSTOP);
+                        enqueue(readyQueue, runningProcess);
+                        runningProcess = dequeue(readyQueue);
+
+                    }else {
+
+
+                        runningProcess = dequeue(readyQueue);
+
+
+                    }
+
                     
     
                     if(runningProcess.processPID == -1){// check if there is a better way to do this check
@@ -123,7 +138,7 @@ void SRTN_algo(){
  
                         runningProcess.processPID = fork();
                         runningProcess.startTime = getClk();
-                        pStart = getClk();
+                        pStart = runningProcess.startTime;
                         sprintf(remaining_str, "%d", runningProcess.remainingTime);
     
     

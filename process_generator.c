@@ -151,6 +151,7 @@ int main(int argc, char *argv[])
 
         while (sent < noOfProcesses && processes[sent].arrivalTime <= x)
         {   
+            processes[sent].finishTime = -1;
             processes[sent].processPID = -1;
             processes[sent].processPPID = getpid();
             SendToScheduler(processes[sent]);

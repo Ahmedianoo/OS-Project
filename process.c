@@ -16,6 +16,7 @@ int main(int agrc, char * argv[])
     remainingtime = atoi(argv[1]);
     while (remainingtime > 0)
     {
+        printf("i am the process %d: %d\n", getpid(), remainingtime);
         waitclk();      //this function is defined in the header file and it waits for the clock tik
         remainingtime--;
     }
