@@ -182,7 +182,7 @@ void RR_algo()
                 currentProcess->processPID = fork();
                 if (currentProcess->processPID == 0)
                 {
-                    execl("./process", "process", remaining_str, NULL);
+                    execl("./process.out", "process", remaining_str, NULL);
                     perror("execl failed: check file name");
                     exit(-1);
                 }
@@ -211,7 +211,8 @@ void RR_algo()
             }
             else
             {
-                printf("Fuck\n");
+                printf("Fuck PID=%d\n",currentProcess->processPID);
+                printf("Karim\n");
                 kill(currentProcess->processPID, SIGSTOP);
                 rotate(&myQ);
             }
