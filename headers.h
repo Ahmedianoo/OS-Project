@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include <time.h>
 
 typedef short bool;
 #define true 1
@@ -35,6 +36,8 @@ void waitclk()
     int start = getClk();
     while (start == getClk())
     {
+        struct timespec ts = {0, 1000000}; // sleep 1 ms
+        nanosleep(&ts, NULL);
     }
 }
 

@@ -177,7 +177,6 @@ void RR_algo()
             enqueueCirc(&myQ, myMsg.data);
             // sprintf(remaining_str, "%d", myMsg.data.remainingTime);
             processesCount++;
-            rotate(&myQ);
         }
         if (processesCount > 0)
         {
@@ -185,7 +184,7 @@ void RR_algo()
             // printQueue(&myQ);
             currentProcess = peekCurrent(&myQ);
 
-            printf("at clock : %d ,process ID :%d will run to clock %d\n", getClk(), currentProcess->processID, getClk() + 1);
+            // printf("at clock : %d ,process ID :%d will run to clock %d\n", getClk(), currentProcess->processID, getClk() + 1);
             if (currentProcess->isFirstRun)
             {
                 currentProcess->startTime = getClk();
@@ -208,24 +207,38 @@ void RR_algo()
                 kill(currentProcess->processPID, SIGCONT);
             }
             int startQuantum = getClk();
-            while (getClk() - startQuantum < Quantum)
+            int currentTime;
+            do
             {
-                // busy wait
-            }
+                currentTime = getClk();
+            } while (currentTime - startQuantum < Quantum);
 
             currentProcess->remainingTime -= Quantum;
-            printf("Current PID=%d, Remaining: %d, Id=%d\n\n", currentProcess->processID, currentProcess->remainingTime, currentProcess->processPID);
+            // printf("Current PID=%d, Remaining: %d, Id=%d\n\n", currentProcess->processID, currentProcess->remainingTime, currentProcess->processPID);
             if (currentProcess->remainingTime <= 0)
             {
-                printf("Process %d finished!\n", currentProcess->processID);
+                // printf("Process %d finished!\n", currentProcess->processID);
                 waitpid(currentProcess->processPID, NULL, 0);
-                printf("process %d , started at  %d ,finished at %d\n\n", currentProcess->processPID, currentProcess->startTime, currentProcess->finishTime);
+                currentProcess->finishTime = getClk();
+                // printf("process %d , started at  %d ,finished at %d\n\n", currentProcess->processPID, currentProcess->startTime, currentProcess->finishTime);
                 removeCurrent(&myQ);
                 processesCount--;
             }
             else
             {
-                kill(currentProcess->processPID, SIGSTOP);
+                printf("\n%d\n", currentProcess->processPID);
+                kill(currentProcess->processPID, SIGSTOP); // i want to verify this
+                int status;
+                pid_t result;
+                do
+                {
+                    result = waitpid(currentProcess->processPID, &status, WUNTRACED | WNOHANG);
+                } while (result == 0);
+
+                if (result == currentProcess->processPID && WIFSTOPPED(status))
+                {
+                    printf("Child %d was stopped by signal %d\n", result, WSTOPSIG(status));
+                }
                 rotate(&myQ);
             }
             if (processesCount == 0)
