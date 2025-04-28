@@ -1,4 +1,6 @@
 #include "headers.h"
+#include "helpers.h"
+
 
 #define MAXPROCESSES 100
 
@@ -93,6 +95,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+
     switch (algorithm)
     {
     case RR:
@@ -112,7 +115,7 @@ int main(int argc, char *argv[])
     if (schedulerID == 0)
     {
         printf("I am the schedular with PID: %d\n", getpid());
-        execl("scheduler", "scheduler", "I am the schedular, the process manager has just created me", NULL);
+        execl("./scheduler.out", "scheduler", algorithmToString(algorithm), "I am the schedular, the process manager has just created me", NULL);
         perror("execl failed");
         return 0;
     }
@@ -127,8 +130,8 @@ int main(int argc, char *argv[])
     if (clockID == 0)
     {
         printf("I am the clock with PID: %d\n", getpid());
-        execl("clk", "clk", "I am the clock, the process manager has just created me\n", NULL);
-        perror("execl failed\n");
+        execl("./clk.out", "clk", "I am the clock, the process manager has just created me", NULL);
+        perror("execl failed");
         exit(-1);
     }
     else if (clockID == -1)
@@ -147,7 +150,10 @@ int main(int argc, char *argv[])
         x = getClk();
 
         while (sent < noOfProcesses && processes[sent].arrivalTime <= x)
-        {
+        {   
+            processes[sent].finishTime = -1;
+            processes[sent].processPID = -1;
+            processes[sent].processPPID = getpid();
             SendToScheduler(processes[sent]);
             sent++;
         }

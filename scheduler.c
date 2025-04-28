@@ -9,17 +9,34 @@
 #include <math.h>
 #include <signal.h>
 #include "headers.h"
-#include "PCB.h"
-#include "priority_queue.h"
-#include "circularqueue.h"
-FILE *logFile, *perfFile;
-int msgq_id;
-int cpuBusyTime = 0;
-int totalWaiting = 0, totalProcesses = 0;
-float totalWTA = 0;
-float wtaArray[1000];
-int wtaCount = 0;
-int startTime = 0, finishTime = 0;
+#include "SRTNQueue.h"
+
+
+
+
+PCB runningProcess;
+
+void processFinished_handler(int signum){ 
+
+
+    int stat_loc;
+    
+    int pid = wait(&stat_loc);
+    if (pid == -1) {
+        perror("Error while waiting for a child process"); 
+    } else if (WIFEXITED(stat_loc)) {
+        int index = WEXITSTATUS(stat_loc);
+        runningProcess.finishTime = getClk();
+        printf("process #%d has started at time %d and finished at %d.\n", pid, runningProcess.startTime, runningProcess.finishTime);
+        //killpg(getpgrp(), SIGKILL);
+    }
+    
+
+
+    
+    signal(SIGUSR1, processFinished_handler);
+}
+
 int fromPGenQId;
 void InitComGentoScheduler()
 {
@@ -29,121 +46,134 @@ void InitComGentoScheduler()
         perror("process gen to scheduler msg Q");
     }
 }
-void writeLog(int time, PCB p, const char state) {
-    fprintf(logFile, "At time %d process %d %s arr %d total %d remain %d wait %d",
-            time, p.processID, state, p.arrivalTime, p.runtime, p.remainingTime, p.waitingTime);
 
-    if (strcmp(state, "finished") == 0) {
-        fprintf(logFile, " TA %d WTA %.2f", p.turnAroundTime, p.weightedTurnAroundTime);
-    }
 
-    fprintf(logFile, "\n");
-    fflush(logFile);
-}
-void writePerformance() {
-    float avgWaiting = (float)totalWaiting / totalProcesses;
-    float avgWTA = totalWTA / totalProcesses;
-    float stdWTA = 0;
-
-    for (int i = 0; i < wtaCount; i++)
-        stdWTA += pow(wtaArray[i] - avgWTA, 2);
-
-    stdWTA = sqrt(stdWTA / totalProcesses);
-    float utilization = ((float)cpuBusyTime / (finishTime - startTime))* 100;
-
-    fprintf(perfFile, "CPU utilization = %.2f%%\n", utilization);
-    fprintf(perfFile, "Avg WTA = %.2f\n", avgWTA);
-    fprintf(perfFile, "Avg Waiting = %.2f\n", avgWaiting);
-    fprintf(perfFile, "Std WTA = %.2f\n", stdWTA);
-
-    fclose(perfFile);
-}   
-    void cleanup() {
-        msgctl(msgq_id, IPC_RMID, NULL);
-        destroyClk(false);
-        fclose(logFile);
-    }
-    void runHPF() {
-        PriorityQueue *readyQueue = createQueue();
-        int processRunning = 0;
-        pid_t currentPID = -1;
-        PCB currentProcess;
-    
-        while (1) {
-            int now = getClk();
-    
-            // Receive new processes
-            msgbuff msg;
-            while (msgrcv(msgq_id, &msg, sizeof(PCB), 0, IPC_NOWAIT) != -1) {
-                enqueue(readyQueue, msg.process);
-            }
-    
-            // If idle, start the next process
-            if (!processRunning && !isEmpty(readyQueue)) {
-                currentProcess = dequeue(readyQueue);
-                currentProcess.startTime = now;
-                currentProcess.waitingTime = now - currentProcess.arrivalTime;
-                currentProcess.remainingTime = currentProcess.runtime;
-    
-                writeLog(now, currentProcess, "started");
-    
-                currentPID = fork();
-                if (currentPID == 0) {
-                    char runtimeStr[10];
-                    sprintf(runtimeStr, "%d", currentProcess.runtime);
-                    execl("./process.out", "process.out", runtimeStr, NULL);
-                    perror("Failed to exec process");
-                    exit(1);
-                }
-    
-                cpuBusyTime += currentProcess.runtime;
-                processRunning = 1;
-    
-                if (startTime == 0)
-                    startTime = now;
-            }
-    
-            // Check if current process is done
-            if (processRunning) {
-                int status;
-                pid_t result = waitpid(currentPID, &status, WNOHANG);
-                if (result == currentPID) {
-                    int endTime = getClk();
-                    currentProcess.finishTime = endTime;
-                    currentProcess.turnAroundTime = endTime - currentProcess.arrivalTime;
-                    currentProcess.weightedTurnAroundTime = (float)currentProcess.turnAroundTime / currentProcess.runtime;
-    
-                    writeLog(endTime, currentProcess, "finished");
-    
-                    totalWTA += currentProcess.weightedTurnAroundTime;
-                    totalWaiting += currentProcess.waitingTime;
-                    wtaArray[wtaCount++] = currentProcess.weightedTurnAroundTime;
-                    totalProcesses++;
-    
-                    finishTime = endTime;
-                    processRunning = 0;
-                }
-            }
-    
-            sleep(1);
-        }
-    }
-    void runSRTN() {
-        printf("[Not implemented] SRTN will go here.\n");
-        exit(0);
-    }
-    
-    void runRR(int quantum) {
-        printf("[Not implemented] RR with quantum %d will go here.\n", quantum);
-        exit(0);
-    }
-    
-struct CircularQueue myQ;
-msgbuff RecieveProcess()
+msgbuff RecieveProcess(bool* success)
 {
     struct msgbuff myMsg;
-    msgrcv(fromPGenQId, &myMsg, sizeof(myMsg.data), getpid() % 10000, !IPC_NOWAIT);
-    return myMsg;
+    int r = msgrcv(fromPGenQId, &myMsg, sizeof(myMsg) - sizeof(long), getpid() % 10000, IPC_NOWAIT);
+    
+    if (r != -1)
+    {
+        *success = true;
+        return myMsg;
+    }
+    else
+    {
+        *success = false;
+        struct msgbuff empty = {0};
+        return empty;
+    }
+}
+
+
+
+
+
+void SRTN_algo(){
+    char remaining_str[10];
+    struct msgbuff myMsg;
+    PCB recProcess;
+    runningProcess;
+    bool success = 0;
+    PriorityQueueSRTN* readyQueue = createQueue();
+
+    while(success == 0  || myMsg.data.arrivalTime > getClk()){
+
+        myMsg = RecieveProcess(&success);
+    }
+
+    runningProcess = myMsg.data;
+    printf("\n recieved process with id: %d\n", runningProcess.processID);
+    
+
+    bool first = 1;
+ 
+    int pStart;
+
+
+    while(true){
+        
+        if(first){
+            first = 0;
+            if(runningProcess.remainingTime > 0){
+
+                sprintf(remaining_str, "%d", runningProcess.remainingTime);
+                runningProcess.processPID = fork();
+                runningProcess.startTime = getClk();
+                pStart = runningProcess.startTime;
+
+                if (runningProcess.processPID == 0) {
+                    execl("./process.out", "process", remaining_str,NULL);
+                    perror("execl failed"); 
+                    exit(1);
+                }
+            }
+
+        }else { 
+            myMsg = RecieveProcess(&success);
+            if(success && myMsg.data.arrivalTime <= getClk()){
+
+                //printf("i am here in the srtn\n");
+                recProcess = myMsg.data;
+                enqueue(readyQueue, recProcess);
+                //printf("i am here after the enqueue with id %d\n", recProcess.processID);
+                if(readyQueue->head->data.remainingTime < runningProcess.remainingTime || runningProcess.remainingTime == 0){
+                    //printf("i am here after the enqueue with id %d, i have remaining time %d, the pstart %d\n", recProcess.processID, recProcess.remainingTime, pStart);
+                    int tempclk = getClk();
+                    //rintf("i am the running process %d\n", runningProcess.processID);
+
+
+                    if(runningProcess.finishTime ==  -1){
+                        runningProcess.remainingTime = runningProcess.remainingTime - (tempclk - pStart);
+                        runningProcess.last_scheduled_time = tempclk;
+                        kill(runningProcess.processID, SIGSTOP);
+                        enqueue(readyQueue, runningProcess);
+                        runningProcess = dequeue(readyQueue);
+
+                    }else {
+
+
+                        runningProcess = dequeue(readyQueue);
+
+
+                    }
+
+                    
+    
+                    if(runningProcess.processPID == -1){// check if there is a better way to do this check
+    
+    
+                        printf("\n recieved process with id: %d\n", runningProcess.processID);
+ 
+                        runningProcess.processPID = fork();
+                        runningProcess.startTime = getClk();
+                        pStart = runningProcess.startTime;
+                        sprintf(remaining_str, "%d", runningProcess.remainingTime);
+    
+    
+                        if (runningProcess.processPID == 0) {
+                            execl("./process.out", "process", remaining_str,NULL);
+                            perror("execl failed"); 
+                            exit(1);
+                        }
+                        
+                    }else{
+                        kill(runningProcess.processPID, SIGCONT);
+                        pStart = getClk();
+    
+                    }
+    
+                }
+
+
+            }
+
+
+        }
+
+    }
+    return;
 }
 
 int main(int argc, char *argv[])
@@ -159,43 +189,39 @@ int main(int argc, char *argv[])
     
     initClk();
     InitComGentoScheduler();
+    signal(SIGUSR1, processFinished_handler);
 
-    initQueue(&myQ);
-    struct msgbuff myMsg;
-    msgq_id = msgget(MSGKEY, 0666);
-    if (msgq_id == -1) {
-        perror("Scheduler: failed to access message queue");
-        exit(1);
-    }
-    logFile = fopen("scheduler.log", "w");
-    perfFile = fopen("scheduler.perf", "w");
-    if (!logFile || !perfFile) {
-        perror("Failed to open log/perf files");
-        exit(1);
-    }
+    
+    enum algorithms algorithm;
 
-    switch (algorithm) {
-        case 1:
-            runHPF();
-            break;
-        case 2:
-            runSRTN();
-            break;
-        case 3:
-            runRR(quantum);
-            break;
-        default:
-            fprintf(stderr, "Invalid algorithm. Use 1 for HPF, 2 for SRTN, 3 for RR.\n");
-            break;
-    }
-    writePerformance();
-    cleanup();
-    return 0;
+    algorithm = atoi(argv[1]);
     while (true)
     {
+        
+        printf("\n recieved the algorithm: %d", algorithm);
 
-        myMsg = RecieveProcess();
-        printf("\n recieved process with id: %d\n", myMsg.data.processID);
+        switch (algorithm)
+        {
+        case HPF:
+        printf("\n processing with HPF...");
+            //call your function here
+        break;
+
+        case SRTN:
+        printf("\n processing with SRTN...");
+        SRTN_algo();
+            
+        break; 
+
+        case RR:
+        printf("\n processing with RR...");
+          //call your function here  
+        break;   
+        
+        default:
+            break;
+        }
+
     }
     // TODO implement the scheduler :)
     // Round Robin
