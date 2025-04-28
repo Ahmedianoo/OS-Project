@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include <time.h>
 
 typedef short bool;
 #define true 1
@@ -21,7 +22,8 @@ typedef short bool;
 
 ///==============================
 // don't mess with this variable//
-int *shmaddr; //
+int *shmaddr;
+int shmid; //
 //===============================
 
 int getClk()
@@ -29,9 +31,14 @@ int getClk()
     return *shmaddr;
 }
 
-void waitclk(){
+void waitclk()
+{
     int start = getClk();
-    while(start == getClk()){ }
+    while (start == getClk())
+    {
+        struct timespec ts = {0, 1000000}; // sleep 1 ms
+        nanosleep(&ts, NULL);
+    }
 }
 
 /*
@@ -40,7 +47,7 @@ void waitclk(){
  */
 void initClk()
 {
-    int shmid = shmget(SHKEY, 4, 0444);
+    shmid = shmget(SHKEY, 4, 0444);
     while ((int)shmid == -1)
     {
         // Make sure that the clock exists
@@ -62,9 +69,13 @@ void initClk()
 void destroyClk(bool terminateAll)
 {
     shmdt(shmaddr);
+
+    if (shmctl(shmid, IPC_RMID, NULL) == -1)
+    {
+        perror("Error in shmctl IPC_RMID in clock destroy");
+    }
     if (terminateAll)
     {
         killpg(getpgrp(), SIGINT);
     }
 }
-

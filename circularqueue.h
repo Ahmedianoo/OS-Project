@@ -8,7 +8,7 @@
 #include <sys/shm.h>
 #include <sys/sem.h>
 #include <stdlib.h>
-#include <helpers.h>
+// #include <helpers.h>
 
 typedef struct QueueNode
 {
@@ -30,7 +30,7 @@ void initQueue(CircularQueue *q)
     q->size = 0;
 }
 
-void enqueue(CircularQueue *q, PCB data)
+void enqueueCirc(CircularQueue *q, PCB data)
 {
     QueueNode *newNode = (QueueNode *)malloc(sizeof(QueueNode));
     newNode->data = data;
