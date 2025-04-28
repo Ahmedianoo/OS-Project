@@ -1,3 +1,13 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <math.h>
+#include <signal.h>
 #include "headers.h"
 #include "SRTNQueue.h"
 #include "circularqueue.h"
@@ -269,8 +279,15 @@ void RR_algo()
 
 int main(int argc, char *argv[])
 {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: scheduler.out <algorithm_number> [quantum_for_RR]\n");
+        return 1;
+    }
+    int algorithm = atoi(argv[1]);
+    int quantum = (argc >= 3) ? atoi(argv[2]) : 0;
+    signal(SIGINT, cleanup);
     setvbuf(stdout, NULL, _IONBF, 0);
-    printf("\nhello\n");
+    
     initClk();
     InitComGentoScheduler();
     signal(SIGUSR1, processFinished_handler);
