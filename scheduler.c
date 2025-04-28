@@ -160,9 +160,7 @@ void SRTN_algo()
 void RR_algo()
 {
     int Quantum = 1;
-    // char remaining_str[10];
     int processesCount = 0;
-    // int startQuantum = 0;
     struct CircularQueue myQ;
     initQueue(&myQ);
 
@@ -175,8 +173,8 @@ void RR_algo()
         {
             printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
             enqueueCirc(&myQ, myMsg.data);
-            // sprintf(remaining_str, "%d", myMsg.data.remainingTime);
             processesCount++;
+            rotate(&myQ);
         }
         if (processesCount > 0)
         {
@@ -184,7 +182,6 @@ void RR_algo()
             // printQueue(&myQ);
             currentProcess = peekCurrent(&myQ);
 
-            // printf("at clock : %d ,process ID :%d will run to clock %d\n", getClk(), currentProcess->processID, getClk() + 1);
             if (currentProcess->isFirstRun)
             {
                 currentProcess->startTime = getClk();
@@ -200,7 +197,6 @@ void RR_algo()
                     perror("execl failed: check file name");
                     exit(-1);
                 }
-                // kill(currentProcess->processPID, SIGUSR2);
             }
             else
             {
@@ -217,10 +213,16 @@ void RR_algo()
             // printf("Current PID=%d, Remaining: %d, Id=%d\n\n", currentProcess->processID, currentProcess->remainingTime, currentProcess->processPID);
             if (currentProcess->remainingTime <= 0)
             {
-                // printf("Process %d finished!\n", currentProcess->processID);
+
+                kill(currentProcess->processPID, SIGCONT);
+
                 waitpid(currentProcess->processPID, NULL, 0);
+
                 currentProcess->finishTime = getClk();
-                // printf("process %d , started at  %d ,finished at %d\n\n", currentProcess->processPID, currentProcess->startTime, currentProcess->finishTime);
+                printf("process #%d started at %d and finished at %d\n",
+                       currentProcess->processPID,
+                       currentProcess->startTime,
+                       currentProcess->finishTime);
                 removeCurrent(&myQ);
                 processesCount--;
             }
@@ -241,7 +243,7 @@ void RR_algo()
                 }
                 rotate(&myQ);
             }
-            if (processesCount == 0)
+            if (/* generatorDone!! && */ processesCount == 0)
             {
                 break;
             }
