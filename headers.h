@@ -31,25 +31,17 @@ int getClk()
     return *shmaddr;
 }
 
-// void waitclk()
-// {
-//     int start = getClk();
-//     while (start == getClk())
-//     {
-//         struct timespec ts = {0, 1000000}; // sleep 1 ms
-//         nanosleep(&ts, NULL);
-//     }
-// }
-
 void waitclk()
 {
-    int prev = getClk();
-    while (getClk() == prev)
+    int start = getClk();
+    while (start == getClk())
     {
-        struct timespec ts = {0, 5000000}; // sleep 5ms to reduce CPU use
+        struct timespec ts = {0, 1000000}; // sleep 1 ms
         nanosleep(&ts, NULL);
     }
 }
+
+
 
 /*
  * All process call this function at the beginning to establish communication between them and the clock module.
