@@ -5,6 +5,7 @@
 enum algorithms algorithm;
 PCB runningProcess;
 PCB *currentProcess;
+bool childFinished;
 
 void processFinished_handler(int signum)
 {
@@ -19,18 +20,23 @@ void processFinished_handler(int signum)
     else if (WIFEXITED(stat_loc))
     {
         int index = WEXITSTATUS(stat_loc);
-        if (algorithm = RR)
+        if (algorithm == RR)
         {
             currentProcess->finishTime = getClk();
             printf("process #%d has started at time %d and finished at %d.\n", pid, currentProcess->startTime, currentProcess->finishTime);
         }
-        else
+        else if(algorithm == SRTN)
+        {
+            runningProcess.finishTime = getClk();
+            printf("process #%d has started at time %d and finished at %d.\n", pid, runningProcess.startTime, runningProcess.finishTime);
+        }
+        else if(algorithm == HPF)
         {
 
             runningProcess.finishTime = getClk();
             printf("process #%d has started at time %d and finished at %d.\n", pid, runningProcess.startTime, runningProcess.finishTime);
+            childFinished = true;
         }
-        // killpg(getpgrp(), SIGKILL);
     }
 
     signal(SIGUSR1, processFinished_handler);
@@ -76,7 +82,7 @@ void SRTN_algo()
     bool success = 0;
     PriorityQueueSRTN *readyQueue = createQueue();
 
-    while (success == 0 || myMsg.data.arrivalTime > getClk())
+    while (!success == 0 || myMsg.data.arrivalTime > getClk())
     {
 
         myMsg = RecieveProcess(&success);
@@ -171,6 +177,116 @@ void SRTN_algo()
         }
     }
     return;
+}
+
+void HPF_algo() { 
+    
+    PriorityQueue* readyQueue = createQueueHPF();
+     if (!readyQueue) { 
+        perror("Failed to create HPF queue"); 
+        destroyClk(true); 
+        exit(1); }
+
+signal(SIGUSR1, processFinished_handler); // register finish signal
+
+
+PCB runningProcess = {0};
+msgbuff msg;
+bool success = false;
+bool cpuIdle = true;
+char remaining_str[10];
+int totalCount = 0;
+int finishedCount = 0;
+
+// Wait for first valid process
+while (1) {
+    msg = RecieveProcess(&success);
+    if (success && msg.data.arrivalTime <= getClk()) {
+        msg.data.remainingTime = msg.data.runtime;
+        enqueueHPF(readyQueue, msg.data);
+        totalCount++;
+        break;
+    }
+    usleep(500);
+}
+
+while (1) {
+    int now = getClk();
+
+    // Step 1: Receive all new processes
+    msg = RecieveProcess(&success);
+    while (success) {
+        if (msg.data.arrivalTime <= now) {
+            msg.data.remainingTime = msg.data.runtime;
+            enqueueHPF(readyQueue, msg.data);
+            totalCount++;
+            printf("Time %d: Enqueued process ID=%d, priority=%d\n",
+                   now, msg.data.processID, msg.data.processPriority);
+        }
+        msg = RecieveProcess(&success); // try next
+    }
+    
+
+    // Step 2: If CPU is idle, schedule next
+    if (cpuIdle && !isEmptyHPF(readyQueue)) {
+    
+        runningProcess = dequeueHPF(readyQueue);
+        sprintf(remaining_str, "%d", runningProcess.remainingTime);
+        
+
+        pid_t pid = fork();
+        if (pid == -1) {
+            perror("fork failed");
+            destroyClk(true);
+            exit(1);
+        } else if (pid == 0) {
+            execl("./process.out", "process", remaining_str, NULL); //problem here
+            perror("execl failed");
+            destroyClk(false);
+            exit(1);
+        }
+
+        runningProcess.processPID = pid;
+        runningProcess.startTime = getClk();
+        printf("Time %d: Started process ID=%d (priority=%d)\n",
+               runningProcess.startTime,
+               runningProcess.processID,
+               runningProcess.processPriority);
+        cpuIdle = false;///
+        childFinished = 0; // reset flag
+       
+    }
+
+    // Step 3: If child finished via signal
+    if (childFinished && !cpuIdle) {
+        runningProcess.finishTime = getClk();
+        runningProcess.turnAroundTime = runningProcess.finishTime - runningProcess.arrivalTime;
+        runningProcess.weightedTurnAroundTime =
+            (float)runningProcess.turnAroundTime / runningProcess.runtime;
+        runningProcess.remainingTime = 0;
+
+        printf("Time %d: Finished process ID= %d → TA= %d, WTA= %.2f\n",
+               runningProcess.finishTime,
+               runningProcess.processID,
+               runningProcess.turnAroundTime,
+               runningProcess.weightedTurnAroundTime);
+
+        // Optional: log to file here
+        finishedCount++;
+        cpuIdle = true;
+        childFinished = 0;
+    }
+
+    // Step 4: Exit when done
+    if (finishedCount == totalCount && isEmptyHPF(readyQueue) && cpuIdle) {
+        break;
+    }
+
+    usleep(500); // avoid busy waiting
+}
+
+destroyQueueHPF(readyQueue);
+printf("HPF Scheduling finished.\n");
 }
 
 void RR_algo()
@@ -285,13 +401,12 @@ int main(int argc, char *argv[])
         {
         case HPF:
             printf("\n processing with HPF...");
-            // call your function here
+            HPF_algo();
             break;
 
         case SRTN:
             printf("\n processing with SRTN...");
             SRTN_algo();
-
             break;
 
         case RR:

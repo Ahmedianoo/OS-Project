@@ -66,16 +66,18 @@ void initClk()
  *                      It terminates the whole system and releases resources.
  */
 
-void destroyClk(bool terminateAll)
-{
-    shmdt(shmaddr);
-
-    if (shmctl(shmid, IPC_RMID, NULL) == -1)
-    {
-        perror("Error in shmctl IPC_RMID in clock destroy");
-    }
-    if (terminateAll)
-    {
-        killpg(getpgrp(), SIGINT);
-    }
-}
+ void destroyClk(bool terminateAll)
+ {
+     shmdt(shmaddr); // Detach only
+ 
+     if (terminateAll)
+     {
+         // Only delete and kill if it's the main process (clock)
+         if (shmctl(shmid, IPC_RMID, NULL) == -1)
+         {
+             perror("Error in shmctl IPC_RMID in clock destroy");
+         }
+ 
+         killpg(getpgrp(), SIGINT); // End all processes in the group
+     }
+ }
