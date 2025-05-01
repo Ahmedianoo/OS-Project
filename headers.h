@@ -31,12 +31,22 @@ int getClk()
     return *shmaddr;
 }
 
+// void waitclk()
+// {
+//     int start = getClk();
+//     while (start == getClk())
+//     {
+//         struct timespec ts = {0, 1000000}; // sleep 1 ms
+//         nanosleep(&ts, NULL);
+//     }
+// }
+
 void waitclk()
 {
-    int start = getClk();
-    while (start == getClk())
+    int prev = getClk();
+    while (getClk() == prev)
     {
-        struct timespec ts = {0, 1000000}; // sleep 1 ms
+        struct timespec ts = {0, 5000000}; // sleep 5ms to reduce CPU use
         nanosleep(&ts, NULL);
     }
 }
