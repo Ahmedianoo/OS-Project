@@ -33,11 +33,11 @@ int getClk()
 
 void waitclk()
 {
+    int x = 0;
     int start = getClk();
     while (start == getClk())
     {
-        struct timespec ts = {0, 1000000}; // sleep 1 ms
-        nanosleep(&ts, NULL);
+        x++;
     }
 }
 
@@ -51,8 +51,8 @@ void initClk()
     while ((int)shmid == -1)
     {
         // Make sure that the clock exists
-        printf("Wait! The clock not initialized yet!\n");
-        sleep(1);
+        // printf("Wait! The clock not initialized yet!\n");
+        // sleep(1);
         shmid = shmget(SHKEY, 4, 0444);
     }
     shmaddr = (int *)shmat(shmid, (void *)0, 0);
@@ -69,13 +69,13 @@ void initClk()
 void destroyClk(bool terminateAll)
 {
     shmdt(shmaddr);
-
-    if (shmctl(shmid, IPC_RMID, NULL) == -1)
-    {
-        perror("Error in shmctl IPC_RMID in clock destroy");
-    }
     if (terminateAll)
     {
+        if (shmctl(shmid, IPC_RMID, NULL) == -1)
+        {
+            perror("Error in shmctl IPC_RMID in clock destroy");
+        }
+
         killpg(getpgrp(), SIGINT);
     }
 }

@@ -1,5 +1,7 @@
 #include <sys/types.h> // Needed for pid_t
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 enum algorithms
 {
     HELPER,
@@ -14,6 +16,7 @@ typedef struct PCB
     pid_t processPID, processPPID; // Actual OS-level PID from fork()
 
     bool isFirstRun;
+    bool isStopped;
 
     int processPriority; // For HPF (lower = higher priority)
 

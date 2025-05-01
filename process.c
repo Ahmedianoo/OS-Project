@@ -5,7 +5,7 @@ int remainingtime;
 
 // void sigusr2handler()
 // {
-//     printf("got signaled i am %d", getpid());
+//     raise(SIGSTOP);
 // }
 
 int main(int agrc, char *argv[])
@@ -25,15 +25,20 @@ int main(int agrc, char *argv[])
     while (remainingtime > 0)
     {
 
-        // printf("Remaining Time from process %d: %d\n", getpid(), remainingtime);
-        printf("I process %d: will take from clock %d to %d\n", getpid(), getClk(), getClk() + 1);
+        printf("Remaining Time from process %d: %d at %d\n", getpid(), remainingtime, getClk());
+        // printf("I process %d: will take from clock %d to %d\n", getpid(), getClk(), getClk() + 1);
         waitclk(); // this function is defined in the header file and it waits for the clock tik
 
         remainingtime--;
+        // if (remainingtime > 0)
+        // {
+        //     raise(SIGSTOP);
+        // }
     }
     // signal the scheduler to tell him you finished
     kill(getppid(), SIGUSR1);
-    destroyClk(false);
+    // destroyClk(false);
+    exit(getClk());
 
     return 0;
 }

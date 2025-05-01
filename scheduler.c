@@ -5,6 +5,7 @@
 enum algorithms algorithm;
 PCB runningProcess;
 PCB *currentProcess;
+// PCB *currentProcess1;
 
 void processFinished_handler(int signum)
 {
@@ -12,24 +13,25 @@ void processFinished_handler(int signum)
     int stat_loc;
 
     int pid = wait(&stat_loc);
+    // printf("i am %d my status is %d", pid, WEXITSTATUS(stat_loc));
     if (pid == -1)
     {
         perror("Error while waiting for a child process");
     }
     else if (WIFEXITED(stat_loc))
     {
-        int index = WEXITSTATUS(stat_loc);
-        if (algorithm = RR)
-        {
-            currentProcess->finishTime = getClk();
-            printf("process #%d has started at time %d and finished at %d.\n", pid, currentProcess->startTime, currentProcess->finishTime);
-        }
-        else
-        {
+        int finishclk = WEXITSTATUS(stat_loc);
+        // if (algorithm == RR)
+        // {
 
-            runningProcess.finishTime = getClk();
-            printf("process #%d has started at time %d and finished at %d.\n", pid, runningProcess.startTime, runningProcess.finishTime);
-        }
+        printf("process #%d has finished at %d.\n", pid, finishclk);
+        // }
+        // else
+        // {
+
+        //     runningProcess.finishTime = getClk();
+        //     printf("process #%d has started at time %d and finished at %d.\n", pid, runningProcess.startTime, runningProcess.finishTime);
+        // }
         // killpg(getpgrp(), SIGKILL);
     }
 
@@ -89,10 +91,11 @@ void SRTN_algo()
 
     int pStart;
 
+    while (true)
+    {
 
-    while(true){
-        
-        if(first){
+        if (first)
+        {
 
             first = 0;
             if (runningProcess.remainingTime > 0)
@@ -114,38 +117,35 @@ void SRTN_algo()
         else
         {
             myMsg = RecieveProcess(&success);
-            if(success && myMsg.data.arrivalTime <= getClk()){
+            if (success && myMsg.data.arrivalTime <= getClk())
+            {
 
-                //printf("i am here in the srtn\n");
+                // printf("i am here in the srtn\n");
                 recProcess = myMsg.data;
                 enqueue(readyQueue, recProcess);
-                //printf("i am here after the enqueue with id %d\n", recProcess.processID);
-                if(readyQueue->head->data.remainingTime < runningProcess.remainingTime || runningProcess.remainingTime == 0){
-                    //printf("i am here after the enqueue with id %d, i have remaining time %d, the pstart %d\n", recProcess.processID, recProcess.remainingTime, pStart);
+                // printf("i am here after the enqueue with id %d\n", recProcess.processID);
+                if (readyQueue->head->data.remainingTime < runningProcess.remainingTime || runningProcess.remainingTime == 0)
+                {
+                    // printf("i am here after the enqueue with id %d, i have remaining time %d, the pstart %d\n", recProcess.processID, recProcess.remainingTime, pStart);
                     int tempclk = getClk();
-                    //rintf("i am the running process %d\n", runningProcess.processID);
+                    // rintf("i am the running process %d\n", runningProcess.processID);
 
-
-                    if(runningProcess.finishTime ==  -1){
+                    if (runningProcess.finishTime == -1)
+                    {
                         runningProcess.remainingTime = runningProcess.remainingTime - (tempclk - pStart);
                         runningProcess.last_scheduled_time = tempclk;
                         kill(runningProcess.processID, SIGSTOP);
                         enqueue(readyQueue, runningProcess);
                         runningProcess = dequeue(readyQueue);
-
-                    }else {
-
+                    }
+                    else
+                    {
 
                         runningProcess = dequeue(readyQueue);
-
-
                     }
 
-                    
-    
-                    if(runningProcess.processPID == -1){// check if there is a better way to do this check
-    
-    
+                    if (runningProcess.processPID == -1)
+                    { // check if there is a better way to do this check
 
                         printf("\n recieved process with id: %d\n", runningProcess.processID);
 
@@ -173,96 +173,201 @@ void SRTN_algo()
     return;
 }
 
+// void RR_algo()
+// {
+//     int Quantum = 1;
+//     int processesCount = 0;
+//     int startQuantum = 0;
+//     int execDuration = 0;
+//     int currentTime = 0;
+//     bool once = true;
+//     struct CircularQueue myQ;
+//     initQueue(&myQ);
+
+//     bool success = 0;
+//     // PCB newProcess = RecieveProcess(success);
+//     while (true)
+//     {
+//         // printf("\ni looped\n");
+//         struct msgbuff myMsg = RecieveProcess(&success);
+//         if (success)
+//         {
+//             printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
+//             enqueueCirc(&myQ, myMsg.data);
+//             processesCount++;
+//             // printQueue(&myQ);
+//         }
+//         if (processesCount > 0)
+//         {
+//             rotate(&myQ);
+//             printQueue(&myQ);
+//             currentProcess = peekCurrent(&myQ);
+
+//             if (currentProcess->isFirstRun)
+//             {
+//                 currentProcess->startTime = getClk();
+//                 printf("i :%d started at %d\n", currentProcess->processID, currentProcess->startTime);
+//                 currentProcess->isFirstRun = false;
+
+//                 char remaining_str[10];
+//                 sprintf(remaining_str, "%d", currentProcess->remainingTime);
+
+//                 currentProcess->processPID = fork();
+//                 if (currentProcess->processPID == 0)
+//                 {
+//                     execl("./process", "process", remaining_str, NULL);
+//                     perror("execl failed: check file name");
+//                 }
+//             }
+//             else
+//             {
+//                 // printf("\n %d continuing\n", currentProcess->processID);
+//                 if (currentProcess->isStopped)
+//                 {
+//                     kill(currentProcess->processPID, SIGCONT);
+//                     printf("I am %d continue", currentProcess->processID);
+//                     currentProcess->isStopped = false;
+//                 }
+//             }
+//             startQuantum = getClk();
+//             printf("I %d have %d remaining ", currentProcess->processID, currentProcess->remainingTime);
+//             execDuration = MIN(Quantum, currentProcess->remainingTime);
+//             currentProcess->remainingTime -= execDuration;
+
+//             while (getClk() - startQuantum < execDuration)
+//             {
+
+//                 // if (getClk() == 9 && once)
+//                 // {
+//                 //     printf("\nflag1\n");
+//                 //     printQueue(&myQ);
+//                 //     once = false;
+//                 // }
+//             }
+//             // printf("\nflag\n");
+
+//             // printf("Current PID=%d, Remaining: %d, Id=%d\n\n", currentProcess->processID, currentProcess->remainingTime, currentProcess->processPID);
+//             if (currentProcess->remainingTime <= 0)
+//             {
+//                 removeCurrent(&myQ);
+//                 // printQueue(&myQ);
+//                 processesCount--;
+//             }
+//             else
+//             {
+//                 printf("\n%d\n", currentProcess->processPID); // i want to verify this
+//                 // if (!currentProcess->isStopped)
+//                 // {
+//                 //     kill(currentProcess->processPID, SIGSTOP);
+//                 //     currentProcess->isStopped = true;
+//                 // }
+//             }
+//             // if (/* generatorDone!! && */ processesCount == 0)
+//             // {
+//             //     break;
+//             // }
+//         }
+//     }
+// }
 void RR_algo()
 {
     int Quantum = 1;
     int processesCount = 0;
+    int startQuantum = 100;
+    int execDuration = 0;
+    int currentTime = 0;
+    bool once = false;
+    bool flagToRotate = false;
+    bool existsRunning = false;
     struct CircularQueue myQ;
     initQueue(&myQ);
 
     bool success = 0;
-    // PCB newProcess = RecieveProcess(success);
     while (true)
     {
-        struct msgbuff myMsg = RecieveProcess(&success);
-        if (success)
+        for (int i = 0; i < 10; i++)
         {
-            printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
-            enqueueCirc(&myQ, myMsg.data);
-            processesCount++;
-            rotate(&myQ);
+            struct msgbuff myMsg = RecieveProcess(&success);
+            if (success)
+            {
+                printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
+                enqueueCirc(&myQ, myMsg.data);
+                processesCount++;
+                printQueue(&myQ);
+                flagToRotate = true;
+                break;
+            }
         }
         if (processesCount > 0)
         {
+            if (myQ.current == myQ.tail->next && flagToRotate && !existsRunning && myQ.size >= 2)
+            {
+                printf("i am here");
+                printQueue(&myQ);
+                rotate(&myQ); // need to be checked
+                printQueue(&myQ);
+                flagToRotate = false;
+            }
 
-            // printQueue(&myQ);
             currentProcess = peekCurrent(&myQ);
-
-            if (currentProcess->isFirstRun)
+            if (!existsRunning)
             {
-                currentProcess->startTime = getClk();
-                currentProcess->isFirstRun = false;
-
-                char remaining_str[10];
-                sprintf(remaining_str, "%d", currentProcess->remainingTime);
-
-                currentProcess->processPID = fork();
-                if (currentProcess->processPID == 0)
+                if (currentProcess->isFirstRun)
                 {
-                    execl("./process", "process", remaining_str, NULL);
-                    perror("execl failed: check file name");
-                    exit(-1);
+                    currentProcess->startTime = getClk();
+                    printf("i :%d started at %d\n", currentProcess->processID, currentProcess->startTime);
+                    currentProcess->isFirstRun = false;
+
+                    char remaining_str[10];
+                    sprintf(remaining_str, "%d", currentProcess->remainingTime);
+
+                    currentProcess->processPID = fork();
+                    if (currentProcess->processPID == 0)
+                    {
+                        execl("./process", "process", remaining_str, NULL);
+                        perror("execl failed: check file name");
+                    }
+                }
+                else if (!existsRunning)
+                {
+                    printf("\ni am %d continuing at %d \n", currentProcess->processID, getClk());
+                    printQueue(&myQ);
+                    kill(currentProcess->processPID, SIGCONT);
+
+                    // printf("clk ro be signale %d now clk is %d \n", startQuantum + execDuration, getClk());
+                }
+                existsRunning = true;
+                startQuantum = getClk();
+                execDuration = MIN(Quantum, currentProcess->remainingTime);
+                printf("execution duration %d\n", execDuration);
+                currentProcess->remainingTime -= execDuration;
+            }
+
+            while (existsRunning)
+            {
+                if ((startQuantum + execDuration) <= getClk())
+                {
+
+                    if (currentProcess->remainingTime <= 0)
+                    {
+                        removeCurrent(&myQ);
+                        printQueue(&myQ);
+                        processesCount--;
+                    }
+                    else
+                    {
+                        kill(currentProcess->processPID, SIGSTOP);
+                        printf("\n ha U stopped n%d at %d\n", currentProcess->processPID, getClk());
+                    }
+                    existsRunning = false;
+                    rotate(&myQ);
                 }
             }
-            else
-            {
-                kill(currentProcess->processPID, SIGCONT);
-            }
-            int startQuantum = getClk();
-            int currentTime;
-            do
-            {
-                currentTime = getClk();
-            } while (currentTime - startQuantum < Quantum);
 
-            currentProcess->remainingTime -= Quantum;
-            // printf("Current PID=%d, Remaining: %d, Id=%d\n\n", currentProcess->processID, currentProcess->remainingTime, currentProcess->processPID);
-            if (currentProcess->remainingTime <= 0)
-            {
-
-                kill(currentProcess->processPID, SIGCONT);
-
-                waitpid(currentProcess->processPID, NULL, 0);
-
-                currentProcess->finishTime = getClk();
-                printf("process #%d started at %d and finished at %d\n",
-                       currentProcess->processPID,
-                       currentProcess->startTime,
-                       currentProcess->finishTime);
-                removeCurrent(&myQ);
-                processesCount--;
-            }
-            else
-            {
-                printf("\n%d\n", currentProcess->processPID);
-                kill(currentProcess->processPID, SIGSTOP); // i want to verify this
-                int status;
-                pid_t result;
-                do
-                {
-                    result = waitpid(currentProcess->processPID, &status, WUNTRACED | WNOHANG);
-                } while (result == 0);
-
-                if (result == currentProcess->processPID && WIFSTOPPED(status))
-                {
-                    printf("Child %d was stopped by signal %d\n", result, WSTOPSIG(status));
-                }
-                rotate(&myQ);
-            }
-            if (/* generatorDone!! && */ processesCount == 0)
-            {
-                break;
-            }
+            // if (/* generatorDone!! && */ processesCount == 0)
+            // {
+            //     break;
+            // }
         }
     }
 }
