@@ -275,7 +275,6 @@ void RR_algo()
     int processesCount = 0;
     int startQuantum = 100;
     int execDuration = 0;
-    int currentTime = 0;
     bool once = false;
     bool flagToRotate = false;
     bool existsRunning = false;
@@ -285,7 +284,7 @@ void RR_algo()
     bool success = 0;
     while (true)
     {
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 100; i++)
         {
             struct msgbuff myMsg = RecieveProcess(&success);
             if (success)
@@ -293,23 +292,25 @@ void RR_algo()
                 printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
                 enqueueCirc(&myQ, myMsg.data);
                 processesCount++;
-                printQueue(&myQ);
+                // printQueue(&myQ);
                 flagToRotate = true;
                 break;
             }
         }
         if (processesCount > 0)
         {
-            if (myQ.current == myQ.tail->next && flagToRotate && !existsRunning && myQ.size >= 2)
+            currentProcess = peekCurrent(&myQ);
+
+            if (currentProcess->processID == processesCount - 1 && flagToRotate && !existsRunning)
             {
-                printf("i am here");
+                printf("entered exchange block\n");
                 printQueue(&myQ);
                 rotate(&myQ); // need to be checked
                 printQueue(&myQ);
                 flagToRotate = false;
+                currentProcess = peekCurrent(&myQ);
             }
 
-            currentProcess = peekCurrent(&myQ);
             if (!existsRunning)
             {
                 if (currentProcess->isFirstRun)
