@@ -173,109 +173,13 @@ void SRTN_algo()
     return;
 }
 
-// void RR_algo()
-// {
-//     int Quantum = 1;
-//     int processesCount = 0;
-//     int startQuantum = 0;
-//     int execDuration = 0;
-//     int currentTime = 0;
-//     bool once = true;
-//     struct CircularQueue myQ;
-//     initQueue(&myQ);
-
-//     bool success = 0;
-//     // PCB newProcess = RecieveProcess(success);
-//     while (true)
-//     {
-//         // printf("\ni looped\n");
-//         struct msgbuff myMsg = RecieveProcess(&success);
-//         if (success)
-//         {
-//             printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
-//             enqueueCirc(&myQ, myMsg.data);
-//             processesCount++;
-//             // printQueue(&myQ);
-//         }
-//         if (processesCount > 0)
-//         {
-//             rotate(&myQ);
-//             printQueue(&myQ);
-//             currentProcess = peekCurrent(&myQ);
-
-//             if (currentProcess->isFirstRun)
-//             {
-//                 currentProcess->startTime = getClk();
-//                 printf("i :%d started at %d\n", currentProcess->processID, currentProcess->startTime);
-//                 currentProcess->isFirstRun = false;
-
-//                 char remaining_str[10];
-//                 sprintf(remaining_str, "%d", currentProcess->remainingTime);
-
-//                 currentProcess->processPID = fork();
-//                 if (currentProcess->processPID == 0)
-//                 {
-//                     execl("./process", "process", remaining_str, NULL);
-//                     perror("execl failed: check file name");
-//                 }
-//             }
-//             else
-//             {
-//                 // printf("\n %d continuing\n", currentProcess->processID);
-//                 if (currentProcess->isStopped)
-//                 {
-//                     kill(currentProcess->processPID, SIGCONT);
-//                     printf("I am %d continue", currentProcess->processID);
-//                     currentProcess->isStopped = false;
-//                 }
-//             }
-//             startQuantum = getClk();
-//             printf("I %d have %d remaining ", currentProcess->processID, currentProcess->remainingTime);
-//             execDuration = MIN(Quantum, currentProcess->remainingTime);
-//             currentProcess->remainingTime -= execDuration;
-
-//             while (getClk() - startQuantum < execDuration)
-//             {
-
-//                 // if (getClk() == 9 && once)
-//                 // {
-//                 //     printf("\nflag1\n");
-//                 //     printQueue(&myQ);
-//                 //     once = false;
-//                 // }
-//             }
-//             // printf("\nflag\n");
-
-//             // printf("Current PID=%d, Remaining: %d, Id=%d\n\n", currentProcess->processID, currentProcess->remainingTime, currentProcess->processPID);
-//             if (currentProcess->remainingTime <= 0)
-//             {
-//                 removeCurrent(&myQ);
-//                 // printQueue(&myQ);
-//                 processesCount--;
-//             }
-//             else
-//             {
-//                 printf("\n%d\n", currentProcess->processPID); // i want to verify this
-//                 // if (!currentProcess->isStopped)
-//                 // {
-//                 //     kill(currentProcess->processPID, SIGSTOP);
-//                 //     currentProcess->isStopped = true;
-//                 // }
-//             }
-//             // if (/* generatorDone!! && */ processesCount == 0)
-//             // {
-//             //     break;
-//             // }
-//         }
-//     }
-// }
-void RR_algo()
+void RR_algo(int Quantum)
 {
-    int Quantum = 1;
+    // int Quantum = 1;
     int processesCount = 0;
     int startQuantum = 100;
     int execDuration = 0;
-    bool once = false;
+    bool pGotRem = false;
     bool flagToRotate = false;
     bool existsRunning = false;
     struct CircularQueue myQ;
@@ -301,13 +205,14 @@ void RR_algo()
         {
             currentProcess = peekCurrent(&myQ);
 
-            if (currentProcess->processID == processesCount - 1 && flagToRotate && !existsRunning)
+            if (!existsRunning && processesCount > 1 && !pGotRem)
             {
                 printf("entered exchange block\n");
                 printQueue(&myQ);
                 rotate(&myQ); // need to be checked
                 printQueue(&myQ);
                 flagToRotate = false;
+                pGotRem = false;
                 currentProcess = peekCurrent(&myQ);
             }
 
@@ -326,7 +231,7 @@ void RR_algo()
                     if (currentProcess->processPID == 0)
                     {
                         execl("./process", "process", remaining_str, NULL);
-                        perror("execl failed: check file name");
+                        perror("execl failed: check file name 1");
                     }
                 }
                 else if (!existsRunning)
@@ -352,6 +257,7 @@ void RR_algo()
                     if (currentProcess->remainingTime <= 0)
                     {
                         removeCurrent(&myQ);
+                        pGotRem = true;
                         printQueue(&myQ);
                         processesCount--;
                     }
@@ -361,7 +267,7 @@ void RR_algo()
                         printf("\n ha U stopped n%d at %d\n", currentProcess->processPID, getClk());
                     }
                     existsRunning = false;
-                    rotate(&myQ);
+                    // rotate(&myQ);
                 }
             }
 
@@ -380,7 +286,7 @@ int main(int argc, char *argv[])
     initClk();
     InitComGentoScheduler();
     signal(SIGUSR1, processFinished_handler);
-
+    int Quantum = atoi(argv[2]);
     algorithm = atoi(argv[1]);
     while (true)
     {
@@ -402,7 +308,8 @@ int main(int argc, char *argv[])
 
         case RR:
             printf("\n processing with RR...");
-            RR_algo();
+            printf("with %d Quantum", Quantum);
+            RR_algo(1);
             break;
 
         default:
