@@ -27,9 +27,9 @@ int main(int agrc, char *argv[])
 
         printf("Remaining Time from process %d: %d at %d\n", getpid(), remainingtime, getClk());
         // printf("I process %d: will take from clock %d to %d\n", getpid(), getClk(), getClk() + 1);
-        waitclk(); // this function is defined in the header file and it waits for the clock tik
 
         remainingtime--;
+        waitclk(); // this function is defined in the header file and it waits for the clock tik
         // if (remainingtime > 0)
         // {
         //     raise(SIGSTOP);

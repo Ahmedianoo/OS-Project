@@ -215,7 +215,11 @@ void RR_algo(int Quantum)
                 pGotRem = false;
                 currentProcess = peekCurrent(&myQ);
             }
+            else
+            {
 
+                pGotRem = false;
+            }
             if (!existsRunning)
             {
                 if (currentProcess->isFirstRun)
