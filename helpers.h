@@ -22,6 +22,9 @@ typedef struct PCB
     int runtime;       // Total time needed to finish
     int remainingTime; // Required for preemptive algorithms like SRTN
 
+    int forked;
+
+    int pStart;
     int startTime;    // When the process actually starts
     int finishTime;   // When it ends
     int LastExecTime; // Used in RR to calculate time slices
@@ -47,3 +50,22 @@ const char* algorithmToString(enum algorithms algo) {
         default: return "0";
     }
 }
+
+
+int comparePCBForSRTN(const void* a, const void* b) {
+    PCB* p1 = (PCB*)a;
+    PCB* p2 = (PCB*)b;
+
+    if (p1->arrivalTime != p2->arrivalTime)
+        return p1->arrivalTime - p2->arrivalTime;
+
+    // Same arrival time  use remaining time
+    if (p1->remainingTime != p2->remainingTime)
+        return p1->remainingTime - p2->remainingTime;
+
+    // If both are still equal  use processID as final tie-breaker
+    return p1->processID - p2->processID;
+}
+//A negative number if a < b (meaning a comes first)
+//A positive number if a > b (meaning b comes first)
+//Zero if they’re equal (no swap needed)

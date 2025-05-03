@@ -22,6 +22,7 @@ typedef short bool;
 ///==============================
 // don't mess with this variable//
 int *shmaddr; //
+int shmid;
 //===============================
 
 int getClk()
@@ -31,7 +32,7 @@ int getClk()
 
 void waitclk(){
     int start = getClk();
-    while(start == getClk()){ }
+    while(start == getClk()){ usleep(1000);}
 }
 
 /*
@@ -40,7 +41,7 @@ void waitclk(){
  */
 void initClk()
 {
-    int shmid = shmget(SHKEY, 4, 0444);
+    shmid = shmget(SHKEY, 4, 0444);
     while ((int)shmid == -1)
     {
         // Make sure that the clock exists
@@ -59,12 +60,17 @@ void initClk()
  *                      It terminates the whole system and releases resources.
  */
 
-void destroyClk(bool terminateAll)
-{
-    shmdt(shmaddr);
-    if (terminateAll)
-    {
-        killpg(getpgrp(), SIGINT);
-    }
-}
+ void destroyClk(bool terminateAll)
+ {
+     shmdt(shmaddr);
+ 
+     if (shmctl(shmid, IPC_RMID, NULL) == -1)
+     {
+         perror("Error in shmctl IPC_RMID in clock destroy");
+     }
+     if (terminateAll)
+     {
+         killpg(getpgrp(), SIGINT);
+     }
+ }
 

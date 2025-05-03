@@ -10,7 +10,8 @@ pid_t schedulerID;
 void clearResources(int signum)
 {
 
-    // destroyClk(true);
+    destroyClk(true);
+    printf("clock destroyed  successfully");
     //  TODO Clears all resources in case of interruption
     if (msgctl(toSchedulerQId, IPC_RMID, NULL) == -1)
     {
@@ -20,7 +21,6 @@ void clearResources(int signum)
     {
         printf("Scheduler Message queue removed successfully.\n");
     }
-    destroyClk(true);
     exit(1);
 }
 
@@ -114,8 +114,10 @@ int main(int argc, char *argv[])
     schedulerID = fork();
     if (schedulerID == 0)
     {
+        char no[10]; 
+        sprintf(no, "%d", noOfProcesses);
         printf("I am the schedular with PID: %d\n", getpid());
-        execl("./scheduler.out", "scheduler", algorithmToString(algorithm), "I am the schedular, the process manager has just created me", NULL);
+        execl("./scheduler.out", "scheduler", algorithmToString(algorithm), no, "I am the schedular, the process manager has just created me", NULL);
         perror("execl failed");
         return 0;
     }
@@ -141,6 +143,10 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    if(algorithm == SRTN){
+        qsort(processes, noOfProcesses, sizeof(PCB), comparePCBForSRTN);
+    }
+
     // 4. Use this function after creating the clock process to initialize clock
     initClk();
     // To get time use this
@@ -148,11 +154,11 @@ int main(int argc, char *argv[])
     while (sent < noOfProcesses)
     {
         x = getClk();
-
+        // something should be done when clk or arrival time = 0
         while (sent < noOfProcesses && processes[sent].arrivalTime <= x)
         {   
             processes[sent].finishTime = -1;
-            processes[sent].processPID = -1;
+            processes[sent].forked = -1;
             processes[sent].processPPID = getpid();
             SendToScheduler(processes[sent]);
             sent++;
@@ -163,7 +169,7 @@ int main(int argc, char *argv[])
 
     while (true)
     {
-        printf("process gen is done\n");
+        //printf("process gen is done\n");
         sleep(1);
     }
     // TODO Generation Main Loop
