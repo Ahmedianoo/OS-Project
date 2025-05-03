@@ -180,7 +180,7 @@ void RR_algo(int Quantum)
     int startQuantum = 100;
     int execDuration = 0;
     bool pGotRem = false;
-    bool flagToRotate = false;
+
     bool existsRunning = false;
     struct CircularQueue myQ;
     initQueue(&myQ);
@@ -197,7 +197,7 @@ void RR_algo(int Quantum)
                 enqueueCirc(&myQ, myMsg.data);
                 processesCount++;
                 // printQueue(&myQ);
-                flagToRotate = true;
+
                 break;
             }
         }
@@ -211,7 +211,7 @@ void RR_algo(int Quantum)
                 printQueue(&myQ);
                 rotate(&myQ); // need to be checked
                 printQueue(&myQ);
-                flagToRotate = false;
+
                 pGotRem = false;
                 currentProcess = peekCurrent(&myQ);
             }
@@ -252,9 +252,10 @@ void RR_algo(int Quantum)
                 printf("execution duration %d\n", execDuration);
                 currentProcess->remainingTime -= execDuration;
             }
-
+            int current_time = getClk();
             while (existsRunning)
             {
+
                 if ((startQuantum + execDuration) <= getClk())
                 {
 
@@ -272,6 +273,22 @@ void RR_algo(int Quantum)
                     }
                     existsRunning = false;
                     // rotate(&myQ);
+                }
+
+                if (getClk() == current_time + 1)
+                {
+                    struct msgbuff myMsg = RecieveProcess(&success);
+                    if (success)
+                    {
+
+                        printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
+                        enqueueCirc(&myQ, myMsg.data);
+                        processesCount++;
+                        // printQueue(&myQ);
+
+                        // break;
+                    }
+                    current_time = getClk();
                 }
             }
 
@@ -313,7 +330,7 @@ int main(int argc, char *argv[])
         case RR:
             printf("\n processing with RR...");
             printf("with %d Quantum", Quantum);
-            RR_algo(1);
+            RR_algo(Quantum);
             break;
 
         default:
