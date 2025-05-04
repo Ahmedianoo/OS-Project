@@ -29,7 +29,7 @@ int finishTime = -1; // the finish time of the last process----
 void writeLog(int time, PCB p, const char *state)
 {
     fprintf(logFile, "At time %d process %d %s arr %d total %d remain %d wait %d",
-            time, p.processID, state, p.startTime, p.runtime, p.remainingTime, p.waitingTime);
+            time, p.processID, state, p.arrivalTime, p.runtime, p.remainingTime, p.waitingTime);
 
     if (strcmp(state, "finished") == 0)
     {
@@ -43,7 +43,7 @@ void writePerformance()
 {
     float avgWaiting = (float)totalWaiting / totalProcesses;
     float avgWTA = totalWTA / totalProcesses;
-    float stdWTA = 0;
+    float stdWTA = 0.0f;
 
     for (int i = 0; i < wtaCount; i++)
         stdWTA += pow(wtaArray[i] - avgWTA, 2);
@@ -357,8 +357,9 @@ void HPF_algo() {
     bool success = false;
     bool cpuFree = true;
     char remaining_str[10];
-    int totalCount = 0;
+    int totalCount = noOfprocesses;
     int finishedCount = 0;
+    printf("Total processes: %d\n", totalCount);
 
     // Wait for first valid process
     while (1)
@@ -368,7 +369,6 @@ void HPF_algo() {
         {
             msg.data.remainingTime = msg.data.runtime;
             enqueueHPF(readyQueue, msg.data);
-            totalCount++;
             break;
         }
         // usleep(500);
@@ -386,7 +386,6 @@ void HPF_algo() {
             {
                 msg.data.remainingTime = msg.data.runtime;
                 enqueueHPF(readyQueue, msg.data);
-                totalCount++;
                 printf("Time %d: Enqueued process ID=%d, priority=%d\n",
                        now, msg.data.processID, msg.data.processPriority);
             }
