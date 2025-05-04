@@ -1,20 +1,19 @@
 #ifndef PRIORITY_QUEUE_H
 #define PRIORITY_QUEUE_H
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "helpers.h"
 
-typedef struct Node {
+typedef struct PriorityQueueNode {
     PCB data;
-    struct Node* next;
-} Node;
+    struct PriorityQueueNode* next;
+} PriorityQueueNode;
 
 typedef struct PriorityQueue {
-    Node* head;
+    PriorityQueueNode* head;
 } PriorityQueue;
 
-PriorityQueue* createQueue() {
+PriorityQueue* createQueueHPF() {
     PriorityQueue* q = (PriorityQueue*)malloc(sizeof(PriorityQueue));
     if (!q) {
         perror("Failed to allocate memory for queue");
@@ -24,8 +23,8 @@ PriorityQueue* createQueue() {
     return q;
 }
 
-void enqueue(PriorityQueue* q, PCB process) {
-    Node* newNode = (Node*)malloc(sizeof(Node));
+void enqueueHPF(PriorityQueue* q, PCB process) {
+    PriorityQueueNode* newNode = (PriorityQueueNode*)malloc(sizeof(PriorityQueueNode));
     if (!newNode) {
         perror("Failed to allocate memory for node");
         return;
@@ -39,7 +38,7 @@ void enqueue(PriorityQueue* q, PCB process) {
         return;
     }
 
-    Node* current = q->head;
+    PriorityQueueNode* current = q->head;
     while (current->next && current->next->data.processPriority <= process.processPriority) {
         current = current->next;
     }
@@ -48,33 +47,33 @@ void enqueue(PriorityQueue* q, PCB process) {
     current->next = newNode;
 }
 
-PCB dequeue(PriorityQueue* q) {
+PCB dequeueHPF(PriorityQueue* q) {
     PCB empty = {0};
     if (!q || !q->head) {
         fprintf(stderr, "Queue underflow: No process to dequeue\n");
         return empty;
     }
 
-    Node* temp = q->head;
+    PriorityQueueNode* temp = q->head;
     PCB process = temp->data;
     q->head = temp->next;
     free(temp);
     return process;
 }
 
-PCB peek(PriorityQueue* q) {
+PCB peekHPF(PriorityQueue* q) {
     if (!q || !q->head) {
         return (PCB){0};
     }
     return q->head->data;
 }
 
-int isEmpty(PriorityQueue* q) {
+int isEmptyHPF(PriorityQueue* q) {
     return !q || q->head == NULL;
 }
 
-void destroyQueue(PriorityQueue* q) {
-    Node* temp;
+void destroyQueueHPF(PriorityQueue* q) {
+    PriorityQueueNode* temp;
     while (q && q->head) {
         temp = q->head;
         q->head = q->head->next;

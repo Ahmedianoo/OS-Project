@@ -1,7 +1,7 @@
-#include "headers.h"
+    #include "headers.h"
 
-/* Modify this file as needed*/
-int remainingtime;
+    /* Modify this file as needed*/
+    int remainingtime;
 
 int main(int agrc, char * argv[])
 {

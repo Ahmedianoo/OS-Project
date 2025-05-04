@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include <time.h>
 
 typedef short bool;
 #define true 1
@@ -30,7 +31,8 @@ int getClk()
     return *shmaddr;
 }
 
-void waitclk(){
+void waitclk()
+{
     int start = getClk();
     while(start == getClk()){ usleep(1000);}
 }
@@ -41,6 +43,7 @@ void waitclk(){
  */
 void initClk()
 {
+    shmid = shmget(SHKEY, 4, 0444);
     shmid = shmget(SHKEY, 4, 0444);
     while ((int)shmid == -1)
     {
@@ -62,15 +65,16 @@ void initClk()
 
  void destroyClk(bool terminateAll)
  {
-     shmdt(shmaddr);
+     shmdt(shmaddr); // Detach only
  
-     if (shmctl(shmid, IPC_RMID, NULL) == -1)
-     {
-         perror("Error in shmctl IPC_RMID in clock destroy");
-     }
      if (terminateAll)
      {
-         killpg(getpgrp(), SIGINT);
+         // Only delete and kill if it's the main process (clock)
+         if (shmctl(shmid, IPC_RMID, NULL) == -1)
+         {
+             perror("Error in shmctl IPC_RMID in clock destroy");
+         }
+ 
+         killpg(getpgrp(), SIGINT); // End all processes in the group
      }
  }
-

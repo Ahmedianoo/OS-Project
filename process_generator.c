@@ -1,7 +1,6 @@
 #include "headers.h"
 #include "helpers.h"
 
-
 #define MAXPROCESSES 100
 
 int toSchedulerQId;
@@ -10,6 +9,8 @@ pid_t schedulerID;
 void clearResources(int signum)
 {
 
+    destroyClk(true);
+    printf("clock destroyed  successfully");
     destroyClk(true);
     printf("clock destroyed  successfully");
     //  TODO Clears all resources in case of interruption
@@ -72,6 +73,7 @@ int main(int argc, char *argv[])
                   &processes[noOfProcesses].processPriority) == 4)
     {
         processes[noOfProcesses].remainingTime = processes[noOfProcesses].runtime;
+        processes[noOfProcesses].isFirstRun = true;
         noOfProcesses++;
     }
 
@@ -94,7 +96,6 @@ int main(int argc, char *argv[])
         printf("Invalid choice. Exiting.\n");
         return 1;
     }
-
 
     switch (algorithm)
     {
@@ -133,7 +134,7 @@ int main(int argc, char *argv[])
     {
         printf("I am the clock with PID: %d\n", getpid());
         execl("./clk.out", "clk", "I am the clock, the process manager has just created me", NULL);
-        perror("execl failed");
+        perror("execl failed: check file name");
         exit(-1);
     }
     else if (clockID == -1)
@@ -151,12 +152,16 @@ int main(int argc, char *argv[])
     initClk();
     // To get time use this
     int x, sent = 0;
+    setvbuf(stdout, NULL, _IONBF, 0);
     while (sent < noOfProcesses)
     {
         x = getClk();
         // something should be done when clk or arrival time = 0
         while (sent < noOfProcesses && processes[sent].arrivalTime <= x)
-        {   
+
+        {
+            printf("\nclock at send %d\n", x);
+ 
             processes[sent].finishTime = -1;
             processes[sent].forked = -1;
             processes[sent].processPPID = getpid();
@@ -176,4 +181,5 @@ int main(int argc, char *argv[])
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
     // 7. Clear clock resources
+    // wait(&status);
 }
