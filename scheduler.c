@@ -159,7 +159,7 @@ void SRTN_algo()
 
     runningProcess = myMsg.data;
     runningProcess.startTime = getClk();
-    runningProcess.waitingTime = runningProcess.startTime - runningProcess.arrivalTime;
+    //runningProcess.waitingTime = runningProcess.startTime - runningProcess.arrivalTime;
     runningProcess.pStart = runningProcess.startTime;
     startTime = runningProcess.startTime;
     // printf("ahmedhamdasokarziada");
@@ -169,7 +169,7 @@ void SRTN_algo()
     bool first = 1;
   
 
-
+    //finish-arrr-runtime
  
 
 
@@ -257,6 +257,7 @@ void SRTN_algo()
                 {
                     printf("i have succeed\n");
                     recProcess = myMsg.data;
+                    recProcess.last_scheduled_time=getClk();
                     enqueue(readyQueue, recProcess);
                 }
 
@@ -277,6 +278,9 @@ void SRTN_algo()
                         // printf("before sigstop, i am the running process %d\n", runningProcess.processPID);
                         enqueue(readyQueue, runningProcess);
                         kill(runningProcess.processPID, SIGSTOP);
+                        writeLog(tempclk,runningProcess,"stopped");
+                        //runningProcess.waitingTime=tempclk-runningProcess.last_scheduled_time+runningProcess.waitingTime;
+                        runningProcess.last_scheduled_time=tempclk;
                         runningProcess = dequeue(readyQueue);
                     }
                     else
@@ -318,7 +322,8 @@ void SRTN_algo()
                         {
 
                             runningProcess.forked = 1;
-                            runningProcess.waitingTime = runningProcess.startTime - runningProcess.arrivalTime;
+                            //runningProcess.waitingTime = runningProcess.startTime - runningProcess.arrivalTime;
+                            runningProcess.waitingTime=tempclk-runningProcess.last_scheduled_time+runningProcess.waitingTime;
                             writeLog(runningProcess.startTime, runningProcess, "started");
                         }
                         
@@ -327,8 +332,8 @@ void SRTN_algo()
                         contSRTN = false;
                         kill(runningProcess.processPID, SIGCONT);
                         runningProcess.pStart = getClk();
+                        runningProcess.waitingTime=runningProcess.pStart-runningProcess.last_scheduled_time+runningProcess.waitingTime;
                         writeLog(runningProcess.pStart, runningProcess, "continue");
-    
                     }
                 }
             }
@@ -481,6 +486,7 @@ void RR_algo(int Quantum)
             if (success)
             {
                 printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
+                myMsg.data.last_scheduled_time=getClk();
                 enqueueCirc(&myQ, myMsg.data);
                 processesCount++;
                 // printQueue(&myQ);
@@ -513,7 +519,7 @@ void RR_algo(int Quantum)
                 {
                     //---------------------- Some Logs -----------------------------------------
                     currentProcess->startTime = getClk();
-                    currentProcess->waitingTime = currentProcess->startTime - currentProcess->arrivalTime;
+                    //currentProcess->waitingTime = currentProcess->startTime-currentProcess->last_scheduled_time+currentProcess->waitingTime;
                     writeLog(currentProcess->startTime, *currentProcess, "started");
                     //---------------------- Some Logs -----------------------------------------
 
@@ -536,9 +542,9 @@ void RR_algo(int Quantum)
                     printf("\ni am %d continuing at %d \n", currentProcess->processID, getClk());
                     printQueue(&myQ);
                     kill(currentProcess->processPID, SIGCONT);
-
+                    currentProcess->waitingTime=getClk()-currentProcess->last_scheduled_time+currentProcess->waitingTime;
                     writeLog(getClk(), *currentProcess, "Continues");
-
+                    currentProcess->last_scheduled_time=getClk();
                     // printf("clk ro be signale %d now clk is %d \n", startQuantum + execDuration, getClk());
                 }
                 if (startTime == -1)
@@ -547,6 +553,7 @@ void RR_algo(int Quantum)
                 }
                 existsRunning = true;
                 startQuantum = getClk();
+                currentProcess->waitingTime+=startQuantum-currentProcess->last_scheduled_time;
                 execDuration = MIN(Quantum, currentProcess->remainingTime);
                 printf("execution duration %d\n", execDuration);
                 currentProcess->remainingTime -= execDuration;
@@ -572,7 +579,7 @@ void RR_algo(int Quantum)
                         cpuBusyTime += currentProcess->runtime;
                         writeLog(currentProcess->finishTime, *currentProcess, "finished");
                         //---------------------- Some Logs -----------------------------------------
-
+                        currentProcess->last_scheduled_time=getClk();
                         removeCurrent(&myQ);
                         pGotRem = true;
                         printQueue(&myQ);
@@ -582,6 +589,7 @@ void RR_algo(int Quantum)
                     {
                         kill(currentProcess->processPID, SIGSTOP);
                         printf("\n ha U stopped n%d at %d\n", currentProcess->processPID, getClk());
+                        currentProcess->last_scheduled_time=getClk();
                         writeLog(getClk(), *currentProcess, "Stopped");
                     }
                     existsRunning = false;
@@ -595,6 +603,7 @@ void RR_algo(int Quantum)
                     {
 
                         printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
+                        myMsg.data.last_scheduled_time=getClk();
                         enqueueCirc(&myQ, myMsg.data);
                         processesCount++;
                         // printQueue(&myQ);

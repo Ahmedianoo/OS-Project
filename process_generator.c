@@ -180,6 +180,7 @@ int main(int argc, char *argv[])
             processes[sent].finished = 0;
             processes[sent].forked = -1;
             processes[sent].processPPID = getpid();
+            processes[sent].waitingTime=0;
             SendToScheduler(processes[sent]);
             sent++;
         }
