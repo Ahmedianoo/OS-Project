@@ -162,7 +162,7 @@ void SRTN_algo()
     runningProcess.waitingTime = runningProcess.startTime - runningProcess.arrivalTime;
     runningProcess.pStart = runningProcess.startTime;
     startTime = runningProcess.startTime;
-    printf("ahmedhamdasokarziada");
+    // printf("ahmedhamdasokarziada");
     printf("\n recieved process with id: %d\n", runningProcess.processID);
     noOfRec++;
 
@@ -244,7 +244,8 @@ void SRTN_algo()
 
                 finishTime = getClk();
                 writePerformance();
-                printf("program is finished bye!");
+                destroyQueue(readyQueue);
+                printf("program is finished bye!\n");
                 break;
             }
             else if ((contSRTN || (success && myMsg.data.arrivalTime <= getClk())))
@@ -609,7 +610,7 @@ void RR_algo(int Quantum)
         {
             finishTime = getClk();
             writePerformance();
-            printf("bye!!");
+            printf("bye!!\n");
             break;
         }
     }
@@ -671,6 +672,9 @@ int main(int argc, char *argv[])
     fclose(perfFile);
     // TODO implement the scheduler :)
     // Round Robin
+    destroyClk(false);
+
+    return 0;
 
     // upon termination release the clock resources
 }
