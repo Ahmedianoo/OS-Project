@@ -15,16 +15,16 @@ FILE *logFile;
 FILE *perfFile;
 
 // Process stats
-int totalWaiting = 0;
-int totalProcesses = 0;
-float totalWTA = 0.0;
+int totalWaiting = 0; //accumulation of the waiting time.. start - arrival of each process 
+int totalProcesses = 0; //number of total processes----
+float totalWTA = 0.0;   
 float wtaArray[1000];  // Adjust size as needed
 int wtaCount = 0;
 
 // CPU time tracking
-int cpuBusyTime = 0;
-int startTime = -1;
-int finishTime = -1;
+int cpuBusyTime = 0; //the running time of the processes
+int startTime = -1;  // start time of the first process---
+int finishTime = -1; // the finish time of the last process----   
 
 
 void writeLog(int time, PCB p, const char *state) {
@@ -81,6 +81,17 @@ void processFinished_handler(int signum)
         {
             runningProcess.finishTime = finish;
             //runningProcess.finishTime = getClk();
+            runningProcess.turnAroundTime = runningProcess.finishTime - runningProcess.arrivalTime;
+            runningProcess.weightedTurnAroundTime =(float)runningProcess.turnAroundTime / runningProcess.runtime;
+    
+           
+            totalWaiting += runningProcess.waitingTime;///
+            totalWTA += runningProcess.weightedTurnAroundTime;
+            wtaArray[wtaCount++] = runningProcess.weightedTurnAroundTime;
+            cpuBusyTime += runningProcess.runtime;
+    
+             writeLog(runningProcess.finishTime, runningProcess, "finished");
+             runningProcess.finished = 1;
              runningProcess.remainingTime = 0;
              noOfprocesses--;
              noOfRec--;
@@ -139,7 +150,7 @@ void SRTN_algo()
     bool success = 0;
     PriorityQueueSRTN *readyQueue = createQueue();
 
-    while (!success == 0 || myMsg.data.arrivalTime > getClk())
+    while (success == 0 || myMsg.data.arrivalTime > getClk())
     {
 
         myMsg = RecieveProcess(&success);
@@ -147,11 +158,17 @@ void SRTN_algo()
 
     runningProcess = myMsg.data;
     runningProcess.startTime = getClk();
+    runningProcess.waitingTime = runningProcess.startTime - runningProcess.arrivalTime;
     runningProcess.pStart = runningProcess.startTime;
+    startTime = runningProcess.startTime;
+    printf("ahmedhamdasokarziada");
     printf("\n recieved process with id: %d\n", runningProcess.processID);
     noOfRec++;
 
     bool first = 1;
+  
+
+
  
 
 
@@ -185,11 +202,22 @@ void SRTN_algo()
                 } else {
                     
                     runningProcess.forked = 1;
+                    writeLog(runningProcess.startTime, runningProcess, "started");
                 }
             }
         }
         else
         {
+
+
+            // if (runningProcess.finished == 1 && runningProcess.forked == 1) {
+
+            //     //runningProcess.waitingTime=0;
+
+            // }
+
+
+
             myMsg = RecieveProcess(&success);
             if(success) {noOfRec++;
                 printf("number of recieved and not finished %d\n", noOfRec);
@@ -205,11 +233,14 @@ void SRTN_algo()
             // }
 
             if(noOfprocesses > 0 && noOfRec == 0){
+                
                 continue;
             }
 
-
             if(noOfprocesses == 0){
+
+                finishTime = getClk();
+                writePerformance();
                 printf("program is finished bye!");
                 break;
 
@@ -263,14 +294,17 @@ void SRTN_algo()
  
 
                         runningProcess.startTime = getClk();
+
                         runningProcess.pStart = runningProcess.startTime;
+
                         sprintf(remaining_str, "%d", runningProcess.remainingTime);
                         runningProcess.processPID = fork();
                         if (runningProcess.processPID == -1) {
                             perror("forking failed"); 
                             exit(1);
                         }
-                        
+
+
     
                         if (runningProcess.processPID == 0) {
                             execl("./process.out", "process", remaining_str,NULL);
@@ -279,13 +313,16 @@ void SRTN_algo()
                         }else {
                     
                             runningProcess.forked = 1;
+                            runningProcess.waitingTime = runningProcess.startTime - runningProcess.arrivalTime;
+                            writeLog(runningProcess.startTime, runningProcess, "started");
                         }
                         
-                    }else{
+                    }else if (runningProcess.processID != 0){
                         printf("i will cont. now: %d\n", runningProcess.processPID);
                         contSRTN = false;
                         kill(runningProcess.processPID, SIGCONT);
                         runningProcess.pStart = getClk();
+                        writeLog(runningProcess.pStart, runningProcess, "continue");
     
                     }
                 }
@@ -306,7 +343,8 @@ void HPF_algo() {
      if (!readyQueue) { 
         perror("Failed to create HPF queue"); 
         destroyClk(true); 
-        exit(1); }
+        exit(1); 
+    }
 
 signal(SIGUSR1, processFinished_handler); // register finish signal
 
@@ -580,6 +618,7 @@ int main(int argc, char *argv[])
 
         case SRTN:
             printf("\n processing with SRTN...");
+            totalProcesses = noOfprocesses;
             SRTN_algo();
             break;
 

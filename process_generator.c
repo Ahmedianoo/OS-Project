@@ -179,6 +179,7 @@ int main(int argc, char *argv[])
             //printf("\nclock at send %d\n", x);
  
             processes[sent].finishTime = -1;
+            processes[sent].finished = 0;
             processes[sent].forked = -1;
             processes[sent].processPPID = getpid();
             SendToScheduler(processes[sent]);
