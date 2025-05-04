@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
         while (sent < noOfProcesses && processes[sent].arrivalTime <= x)
 
         {
-            printf("\nclock at send %d\n", x);
+            //printf("\nclock at send %d\n", x);
  
             processes[sent].finishTime = -1;
             processes[sent].forked = -1;

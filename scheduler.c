@@ -367,11 +367,11 @@ while (1) {
         runningProcess.waitingTime = runningProcess.startTime - runningProcess.arrivalTime;
         writeLog(runningProcess.startTime, runningProcess, "started");
                if (startTime == -1){
-    startTime = runningProcess.startTime;}
-        cpuFree = false;
-        childFinished = 0; 
+                startTime = runningProcess.startTime;}
+                cpuFree = false;
+                childFinished = 0; 
        
-    }
+                }
 
     // Step 3: If child finished via signal
     if (childFinished && !cpuFree) {
@@ -522,7 +522,7 @@ int main(int argc, char *argv[])
     signal(SIGUSR1, processFinished_handler);
     noOfprocesses = atoi(argv[2]);
     
-    enum algorithms algorithm;
+    // enum algorithms algorithm;
 
     algorithm = atoi(argv[1]);
     while (true)
