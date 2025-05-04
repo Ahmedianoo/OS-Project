@@ -3,3 +3,10 @@
 
 # Ignore your debug script
 debug.sh
+process
+processes.txt
+test_generator
+.idea/
+clk
+process_generator
+scheduler
