@@ -1,11 +1,57 @@
 #include "headers.h"
 #include "SRTNQueue.h"
 #include "circularqueue.h"
+#include <math.h>
 
 enum algorithms algorithm;
 PCB runningProcess;
 PCB *currentProcess;
 bool childFinished;
+FILE *logFile;
+FILE *perfFile;
+
+// Process stats
+int totalWaiting = 0;
+int totalProcesses = 0;
+float totalWTA = 0.0;
+float wtaArray[1000];  // Adjust size as needed
+int wtaCount = 0;
+
+// CPU time tracking
+int cpuBusyTime = 0;
+int startTime = -1;
+int finishTime = -1;
+
+
+void writeLog(int time, PCB p, const char *state) {
+    fprintf(logFile, "At time %d process %d %s arr %d total %d remain %d wait %d",
+            time, p.processID, state, p.startTime, p.runtime, p.remainingTime, p.waitingTime);
+
+    if (strcmp(state, "finished") == 0) {
+        fprintf(logFile, " TA %d WTA %.2f", p.turnAroundTime, p.weightedTurnAroundTime);
+    }
+
+    fprintf(logFile, "\n");
+    fflush(logFile);
+}
+void writePerformance() {
+    float avgWaiting = (float)totalWaiting / totalProcesses;
+    float avgWTA = totalWTA / totalProcesses;
+    float stdWTA = 0;
+
+    for (int i = 0; i < wtaCount; i++)
+        stdWTA += pow(wtaArray[i] - avgWTA, 2);
+
+    stdWTA = sqrt(stdWTA / totalProcesses);
+    float utilization = ((float)cpuBusyTime / (finishTime - startTime)) * 100;
+
+    fprintf(perfFile, "CPU utilization = %.2f%%\n", utilization);
+    fprintf(perfFile, "Avg WTA = %.2f\n", avgWTA);
+    fprintf(perfFile, "Avg Waiting = %.2f\n", avgWaiting);
+    fprintf(perfFile, "Std WTA = %.2f\n", stdWTA);
+    fflush(perfFile);
+
+}
 
 void processFinished_handler(int signum)
 {
@@ -190,10 +236,10 @@ void HPF_algo() {
 signal(SIGUSR1, processFinished_handler); // register finish signal
 
 
-PCB runningProcess = {0};
+runningProcess;
 msgbuff msg;
 bool success = false;
-bool cpuIdle = true;
+bool cpuFree = true;
 char remaining_str[10];
 int totalCount = 0;
 int finishedCount = 0;
@@ -207,28 +253,26 @@ while (1) {
         totalCount++;
         break;
     }
-    usleep(500);
+    //usleep(500);
 }
 
 while (1) {
     int now = getClk();
 
     // Step 1: Receive all new processes
-    msg = RecieveProcess(&success);
-    while (success) {
-        if (msg.data.arrivalTime <= now) {
+    do {
+        msg = RecieveProcess(&success);
+        if (success && msg.data.arrivalTime <= now) {
             msg.data.remainingTime = msg.data.runtime;
             enqueueHPF(readyQueue, msg.data);
             totalCount++;
             printf("Time %d: Enqueued process ID=%d, priority=%d\n",
                    now, msg.data.processID, msg.data.processPriority);
         }
-        msg = RecieveProcess(&success); // try next
-    }
-    
+    } while (success);
 
     // Step 2: If CPU is idle, schedule next
-    if (cpuIdle && !isEmptyHPF(readyQueue)) {
+    if (cpuFree && !isEmptyHPF(readyQueue)) {
     
         runningProcess = dequeueHPF(readyQueue);
         sprintf(remaining_str, "%d", runningProcess.remainingTime);
@@ -240,7 +284,7 @@ while (1) {
             destroyClk(true);
             exit(1);
         } else if (pid == 0) {
-            execl("./process.out", "process", remaining_str, NULL); //problem here
+            execl("./process.out", "process", remaining_str, NULL); 
             perror("execl failed");
             destroyClk(false);
             exit(1);
@@ -248,43 +292,45 @@ while (1) {
 
         runningProcess.processPID = pid;
         runningProcess.startTime = getClk();
-        printf("Time %d: Started process ID=%d (priority=%d)\n",
-               runningProcess.startTime,
-               runningProcess.processID,
-               runningProcess.processPriority);
-        cpuIdle = false;///
-        childFinished = 0; // reset flag
+        runningProcess.waitingTime = runningProcess.startTime - runningProcess.arrivalTime;
+        writeLog(runningProcess.startTime, runningProcess, "started");
+               if (startTime == -1){
+    startTime = runningProcess.startTime;}
+        cpuFree = false;
+        childFinished = 0; 
        
     }
 
     // Step 3: If child finished via signal
-    if (childFinished && !cpuIdle) {
+    if (childFinished && !cpuFree) {
         runningProcess.finishTime = getClk();
         runningProcess.turnAroundTime = runningProcess.finishTime - runningProcess.arrivalTime;
-        runningProcess.weightedTurnAroundTime =
-            (float)runningProcess.turnAroundTime / runningProcess.runtime;
+        runningProcess.weightedTurnAroundTime =(float)runningProcess.turnAroundTime / runningProcess.runtime;
         runningProcess.remainingTime = 0;
 
-        printf("Time %d: Finished process ID= %d → TA= %d, WTA= %.2f\n",
-               runningProcess.finishTime,
-               runningProcess.processID,
-               runningProcess.turnAroundTime,
-               runningProcess.weightedTurnAroundTime);
+       
+        totalWaiting += runningProcess.waitingTime;
+        totalWTA += runningProcess.weightedTurnAroundTime;
+        wtaArray[wtaCount++] = runningProcess.weightedTurnAroundTime;
+        cpuBusyTime += runningProcess.runtime;
 
-        // Optional: log to file here
+        writeLog(runningProcess.finishTime, runningProcess, "finished");
+        runningProcess.waitingTime=0;
         finishedCount++;
-        cpuIdle = true;
+        cpuFree = true;
         childFinished = 0;
     }
 
     // Step 4: Exit when done
-    if (finishedCount == totalCount && isEmptyHPF(readyQueue) && cpuIdle) {
+    if (finishedCount == totalCount && isEmptyHPF(readyQueue) && cpuFree) {
+        totalProcesses= totalCount;
+        finishTime = getClk(); 
         break;
     }
-
-    usleep(500); // avoid busy waiting
+    
+    //usleep(500); // avoid busy waiting
 }
-
+writePerformance();
 destroyQueueHPF(readyQueue);
 printf("HPF Scheduling finished.\n");
 }
@@ -387,6 +433,15 @@ int main(int argc, char *argv[])
 {
     setvbuf(stdout, NULL, _IONBF, 0);
     printf("\nhello\n");
+
+    logFile = fopen("scheduler.log", "w");
+    perfFile = fopen("scheduler.perf", "w");
+
+    if (!logFile || !perfFile) {
+        perror("Error opening log or performance file");
+        return 1;
+    }
+
     initClk();
     InitComGentoScheduler();
     signal(SIGUSR1, processFinished_handler);
@@ -418,6 +473,9 @@ int main(int argc, char *argv[])
             break;
         }
     }
+   
+    fclose(logFile);
+    fclose(perfFile);
     // TODO implement the scheduler :)
     // Round Robin
 
