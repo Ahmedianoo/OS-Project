@@ -33,6 +33,7 @@ int getClk()
 
 void waitclk()
 {
+    int x = 0;
     int start = getClk();
     while(start == getClk()){ usleep(1000);}
 }
@@ -48,8 +49,8 @@ void initClk()
     while ((int)shmid == -1)
     {
         // Make sure that the clock exists
-        printf("Wait! The clock not initialized yet!\n");
-        sleep(1);
+        // printf("Wait! The clock not initialized yet!\n");
+        // sleep(1);
         shmid = shmget(SHKEY, 4, 0444);
     }
     shmaddr = (int *)shmat(shmid, (void *)0, 0);

@@ -96,11 +96,27 @@ int main(int argc, char *argv[])
         printf("Invalid choice. Exiting.\n");
         return 1;
     }
+    int RRQuantum = 1;
+    char quantum_str[12]; // Buffer to hold the string representation
 
     switch (algorithm)
     {
     case RR:
         printf("You selected Round Robin (RR)\n");
+        while (true)
+        {
+            printf("Insert the Quantum needed: ");
+            scanf("%d", &RRQuantum);
+            if (RRQuantum > 0)
+            {
+                break;
+            }
+            else
+            {
+                printf("Invalid Qunatum!\n");
+            }
+        }
+        sprintf(quantum_str, "%d", RRQuantum);
         break;
     case SRTN:
         printf("You selected Shortest Remaining Time Next (SRTN)\n");
@@ -118,7 +134,7 @@ int main(int argc, char *argv[])
         char no[10]; 
         sprintf(no, "%d", noOfProcesses);
         printf("I am the schedular with PID: %d\n", getpid());
-        execl("./scheduler.out", "scheduler", algorithmToString(algorithm), no, "I am the schedular, the process manager has just created me", NULL);
+        execl("./scheduler.out", "scheduler", algorithmToString(algorithm), no, quantum_str,"I am the schedular, the process manager has just created me", NULL);
         perror("execl failed");
         return 0;
     }

@@ -63,6 +63,7 @@ void processFinished_handler(int signum)
     int stat_loc;
 
     int pid = wait(&stat_loc);
+    // printf("i am %d my status is %d", pid, WEXITSTATUS(stat_loc));
     if (pid == -1)
     {
         perror("Error while waiting for a child process");
@@ -153,10 +154,11 @@ void SRTN_algo()
  
 
 
+    while (true)
+    {
 
-    while(true){
-        
-        if(first){
+        if (first)
+        {
 
             first = 0;
             if (runningProcess.remainingTime > 0)
@@ -407,38 +409,63 @@ destroyQueueHPF(readyQueue);
 printf("HPF Scheduling finished.\n");
 }
 
-void RR_algo()
+void RR_algo(int Quantum)
 {
-    int Quantum = 1;
+    // int Quantum = 1;
     int processesCount = 0;
+    int startQuantum = 100;
+    int execDuration = 0;
+    bool pGotRem = false;
+
+    bool existsRunning = false;
     struct CircularQueue myQ;
     initQueue(&myQ);
 
     bool success = 0;
-    // PCB newProcess = RecieveProcess(success);
     while (true)
     {
-        struct msgbuff myMsg = RecieveProcess(&success);
-        if (success)
+        for (int i = 0; i < 100; i++)
         {
-            printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
-            enqueueCirc(&myQ, myMsg.data);
-            processesCount++;
-            rotate(&myQ);
+            struct msgbuff myMsg = RecieveProcess(&success);
+            if (success)
+            {
+                printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
+                enqueueCirc(&myQ, myMsg.data);
+                processesCount++;
+                // printQueue(&myQ);
+
+                break;
+            }
         }
         if (processesCount > 0)
         {
-
-            // printQueue(&myQ);
             currentProcess = peekCurrent(&myQ);
 
-            if (currentProcess->isFirstRun)
+            if (!existsRunning && processesCount > 1 && !pGotRem)
             {
-                currentProcess->startTime = getClk();
-                currentProcess->isFirstRun = false;
+                printf("entered exchange block\n");
+                printQueue(&myQ);
+                rotate(&myQ); // need to be checked
+                printQueue(&myQ);
 
-                char remaining_str[10];
-                sprintf(remaining_str, "%d", currentProcess->remainingTime);
+                pGotRem = false;
+                currentProcess = peekCurrent(&myQ);
+            }
+            else
+            {
+
+                pGotRem = false;
+            }
+            if (!existsRunning)
+            {
+                if (currentProcess->isFirstRun)
+                {
+                    currentProcess->startTime = getClk();
+                    printf("i :%d started at %d\n", currentProcess->processID, currentProcess->startTime);
+                    currentProcess->isFirstRun = false;
+
+                    char remaining_str[10];
+                    sprintf(remaining_str, "%d", currentProcess->remainingTime);
 
                 currentProcess->processPID = fork();
                 if (currentProcess->processPID == 0)
@@ -447,56 +474,64 @@ void RR_algo()
                     perror("execl failed: check file name");
                     exit(-1);
                 }
-            }
-            else
-            {
-                kill(currentProcess->processPID, SIGCONT);
-            }
-            int startQuantum = getClk();
-            int currentTime;
-            do
-            {
-                currentTime = getClk();
-            } while (currentTime - startQuantum < Quantum);
-
-            currentProcess->remainingTime -= Quantum;
-            // printf("Current PID=%d, Remaining: %d, Id=%d\n\n", currentProcess->processID, currentProcess->remainingTime, currentProcess->processPID);
-            if (currentProcess->remainingTime <= 0)
-            {
-
-                kill(currentProcess->processPID, SIGCONT);
-
-                waitpid(currentProcess->processPID, NULL, 0);
-
-                currentProcess->finishTime = getClk();
-                printf("process #%d started at %d and finished at %d\n",
-                       currentProcess->processPID,
-                       currentProcess->startTime,
-                       currentProcess->finishTime);
-                removeCurrent(&myQ);
-                processesCount--;
-            }
-            else
-            {
-                printf("\n%d\n", currentProcess->processPID);
-                kill(currentProcess->processPID, SIGSTOP); // i want to verify this
-                int status;
-                pid_t result;
-                do
+                else if (!existsRunning)
                 {
-                    result = waitpid(currentProcess->processPID, &status, WUNTRACED | WNOHANG);
-                } while (result == 0);
+                    printf("\ni am %d continuing at %d \n", currentProcess->processID, getClk());
+                    printQueue(&myQ);
+                    kill(currentProcess->processPID, SIGCONT);
 
-                if (result == currentProcess->processPID && WIFSTOPPED(status))
-                {
-                    printf("Child %d was stopped by signal %d\n", result, WSTOPSIG(status));
+                    // printf("clk ro be signale %d now clk is %d \n", startQuantum + execDuration, getClk());
                 }
-                rotate(&myQ);
+                existsRunning = true;
+                startQuantum = getClk();
+                execDuration = MIN(Quantum, currentProcess->remainingTime);
+                printf("execution duration %d\n", execDuration);
+                currentProcess->remainingTime -= execDuration;
             }
-            if (/* generatorDone!! && */ processesCount == 0)
+            int current_time = getClk();
+            while (existsRunning)
             {
-                break;
+
+                if ((startQuantum + execDuration) <= getClk())
+                {
+
+                    if (currentProcess->remainingTime <= 0)
+                    {
+                        removeCurrent(&myQ);
+                        pGotRem = true;
+                        printQueue(&myQ);
+                        processesCount--;
+                    }
+                    else
+                    {
+                        kill(currentProcess->processPID, SIGSTOP);
+                        printf("\n ha U stopped n%d at %d\n", currentProcess->processPID, getClk());
+                    }
+                    existsRunning = false;
+                    // rotate(&myQ);
+                }
+
+                if (getClk() == current_time + 1)
+                {
+                    struct msgbuff myMsg = RecieveProcess(&success);
+                    if (success)
+                    {
+
+                        printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
+                        enqueueCirc(&myQ, myMsg.data);
+                        processesCount++;
+                        // printQueue(&myQ);
+
+                        // break;
+                    }
+                    current_time = getClk();
+                }
             }
+
+            // if (/* generatorDone!! && */ processesCount == 0)
+            // {
+            //     break;
+            // }
         }
     }
 }
@@ -523,7 +558,7 @@ int main(int argc, char *argv[])
     noOfprocesses = atoi(argv[2]);
     
     // enum algorithms algorithm;
-
+    int Quantum = atoi(argv[3]);
     algorithm = atoi(argv[1]);
     while (true)
     {
@@ -544,7 +579,8 @@ int main(int argc, char *argv[])
 
         case RR:
             printf("\n processing with RR...");
-            RR_algo();
+            printf("with %d Quantum", Quantum);
+            RR_algo(Quantum);
             break;
 
         default:

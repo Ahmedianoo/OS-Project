@@ -20,6 +20,7 @@ void cleanup(int signum)
 /* This file represents the system clock for ease of calculations */
 int main(int argc, char *argv[])
 {
+    setvbuf(stdout, NULL, _IONBF, 0);
     for (int i = 0; i < argc; i++)
     {
         printf("Argument %d: %s\n", i, argv[i]);
@@ -43,7 +44,8 @@ int main(int argc, char *argv[])
     *shmaddr = clk; /* initialize shared memory */
     while (1)
     {
-        sleep(1);
+        sleep(1.5);
         (*shmaddr)++;
+        printf("\n %d\n", (*shmaddr));
     }
 }
