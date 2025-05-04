@@ -25,6 +25,8 @@ typedef struct PCB
     int runtime;       // Total time needed to finish
     int remainingTime; // Required for preemptive algorithms like SRTN
 
+    int finished;
+
     int forked;
 
     int pStart;

@@ -11,8 +11,6 @@ void clearResources(int signum)
 
     destroyClk(true);
     printf("clock destroyed  successfully");
-    destroyClk(true);
-    printf("clock destroyed  successfully");
     //  TODO Clears all resources in case of interruption
     if (msgctl(toSchedulerQId, IPC_RMID, NULL) == -1)
     {
@@ -179,6 +177,7 @@ int main(int argc, char *argv[])
             //printf("\nclock at send %d\n", x);
  
             processes[sent].finishTime = -1;
+            processes[sent].finished = 0;
             processes[sent].forked = -1;
             processes[sent].processPPID = getpid();
             SendToScheduler(processes[sent]);
@@ -188,11 +187,12 @@ int main(int argc, char *argv[])
         // sleep(1);  // or a shorter delay if needed
     }
 
-    while (true)
-    {
-        //printf("process gen is done\n");
-        sleep(1);
-    }
+    int status;
+
+    pid_t sch_pid = waitpid(schedulerID, &status, 0);
+    // pid_t clk_pid = waitpid(clockID, &status, 0);
+    raise(SIGINT);
+    
     // TODO Generation Main Loop
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
