@@ -466,13 +466,14 @@ void RR_algo(int Quantum)
 
                     char remaining_str[10];
                     sprintf(remaining_str, "%d", currentProcess->remainingTime);
-
-                currentProcess->processPID = fork();
-                if (currentProcess->processPID == 0)
-                {
-                    execl("./process.out", "process", remaining_str, NULL);
-                    perror("execl failed: check file name");
-                    exit(-1);
+                
+                    currentProcess->processPID = fork();
+                    if (currentProcess->processPID == 0)
+                    {
+                        execl("./process.out", "process", remaining_str, NULL);
+                        perror("execl failed: check file name");
+                        exit(-1);
+                    }
                 }
                 else if (!existsRunning)
                 {
