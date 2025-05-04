@@ -73,8 +73,9 @@ void processFinished_handler(int signum)
         int finish = WEXITSTATUS(stat_loc);
         if (algorithm == RR)
         {
-            currentProcess->finishTime = getClk();
-            printf("process #%d has started at time %d and finished at %d.\n", pid, currentProcess->startTime, currentProcess->finishTime);
+            
+            noOfprocesses--;
+            printf("process #%d has finished at %d.\n", pid, finish);
         }
         else if(algorithm == SRTN)
         {
@@ -472,7 +473,7 @@ void RR_algo(int Quantum)
                     {
                         execl("./process.out", "process", remaining_str, NULL);
                         perror("execl failed: check file name");
-                        exit(-1);
+                        //exit(-1);
                     }
                 }
                 else if (!existsRunning)
@@ -533,6 +534,10 @@ void RR_algo(int Quantum)
             // {
             //     break;
             // }
+        } else if(noOfprocesses == 0){
+
+            printf("bye!!");
+            break;
         }
     }
 }
@@ -561,8 +566,8 @@ int main(int argc, char *argv[])
     // enum algorithms algorithm;
     int Quantum = atoi(argv[3]);
     algorithm = atoi(argv[1]);
-    while (true)
-    {
+    // while (true)
+    // {
 
         printf("\n recieved the algorithm: %d", algorithm);
 
@@ -587,7 +592,7 @@ int main(int argc, char *argv[])
         default:
             break;
         }
-    }
+    // }
    
     fclose(logFile);
     fclose(perfFile);
