@@ -486,11 +486,10 @@ void RR_algo(int Quantum)
             if (success)
             {
                 printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
-                myMsg.data.last_scheduled_time=getClk();
+                myMsg.data.last_scheduled_time = getClk();
+                myMsg.data.waitingTime = 0; // Initialize waiting time to 0
                 enqueueCirc(&myQ, myMsg.data);
                 processesCount++;
-                // printQueue(&myQ);
-
                 break;
             }
         }
@@ -510,19 +509,15 @@ void RR_algo(int Quantum)
             }
             else
             {
-
                 pGotRem = false;
             }
             if (!existsRunning)
             {
                 if (currentProcess->isFirstRun)
                 {
-                    //---------------------- Some Logs -----------------------------------------
                     currentProcess->startTime = getClk();
-                    //currentProcess->waitingTime = currentProcess->startTime-currentProcess->last_scheduled_time+currentProcess->waitingTime;
+                    currentProcess->waitingTime = currentProcess->startTime - currentProcess->arrivalTime;
                     writeLog(currentProcess->startTime, *currentProcess, "started");
-                    //---------------------- Some Logs -----------------------------------------
-
                     printf("i :%d started at %d\n", currentProcess->processID, currentProcess->startTime);
                     currentProcess->isFirstRun = false;
 
@@ -534,7 +529,6 @@ void RR_algo(int Quantum)
                     {
                         execl("./process.out", "process", remaining_str, NULL);
                         perror("execl failed: check file name");
-                        // exit(-1);
                     }
                 }
                 else if (!existsRunning)
@@ -542,10 +536,9 @@ void RR_algo(int Quantum)
                     printf("\ni am %d continuing at %d \n", currentProcess->processID, getClk());
                     printQueue(&myQ);
                     kill(currentProcess->processPID, SIGCONT);
-                    currentProcess->waitingTime=getClk()-currentProcess->last_scheduled_time+currentProcess->waitingTime;
+                    currentProcess->waitingTime += getClk() - currentProcess->last_scheduled_time;
                     writeLog(getClk(), *currentProcess, "Continues");
-                    currentProcess->last_scheduled_time=getClk();
-                    // printf("clk ro be signale %d now clk is %d \n", startQuantum + execDuration, getClk());
+                    currentProcess->last_scheduled_time = getClk();
                 }
                 if (startTime == -1)
                 {
@@ -553,7 +546,6 @@ void RR_algo(int Quantum)
                 }
                 existsRunning = true;
                 startQuantum = getClk();
-                currentProcess->waitingTime+=startQuantum-currentProcess->last_scheduled_time;
                 execDuration = MIN(Quantum, currentProcess->remainingTime);
                 printf("execution duration %d\n", execDuration);
                 currentProcess->remainingTime -= execDuration;
@@ -561,13 +553,10 @@ void RR_algo(int Quantum)
             int current_time = getClk();
             while (existsRunning)
             {
-
                 if ((startQuantum + execDuration) <= getClk())
                 {
-
                     if (currentProcess->remainingTime <= 0)
                     {
-                        //---------------------- Some Logs -----------------------------------------
                         currentProcess->finishTime = getClk();
                         currentProcess->turnAroundTime = currentProcess->finishTime - currentProcess->arrivalTime;
                         currentProcess->weightedTurnAroundTime = (float)currentProcess->turnAroundTime / currentProcess->runtime;
@@ -578,8 +567,7 @@ void RR_algo(int Quantum)
                         wtaArray[wtaCount++] = currentProcess->weightedTurnAroundTime;
                         cpuBusyTime += currentProcess->runtime;
                         writeLog(currentProcess->finishTime, *currentProcess, "finished");
-                        //---------------------- Some Logs -----------------------------------------
-                        currentProcess->last_scheduled_time=getClk();
+                        currentProcess->last_scheduled_time = getClk();
                         removeCurrent(&myQ);
                         pGotRem = true;
                         printQueue(&myQ);
@@ -589,11 +577,10 @@ void RR_algo(int Quantum)
                     {
                         kill(currentProcess->processPID, SIGSTOP);
                         printf("\n ha U stopped n%d at %d\n", currentProcess->processPID, getClk());
-                        currentProcess->last_scheduled_time=getClk();
+                        currentProcess->last_scheduled_time = getClk();
                         writeLog(getClk(), *currentProcess, "Stopped");
                     }
                     existsRunning = false;
-                    // rotate(&myQ);
                 }
 
                 if (getClk() == current_time + 1)
@@ -601,14 +588,11 @@ void RR_algo(int Quantum)
                     struct msgbuff myMsg = RecieveProcess(&success);
                     if (success)
                     {
-
                         printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
-                        myMsg.data.last_scheduled_time=getClk();
+                        myMsg.data.last_scheduled_time = getClk();
+                        myMsg.data.waitingTime = 0; // Initialize waiting time to 0
                         enqueueCirc(&myQ, myMsg.data);
                         processesCount++;
-                        // printQueue(&myQ);
-
-                        // break;
                     }
                     current_time = getClk();
                 }
