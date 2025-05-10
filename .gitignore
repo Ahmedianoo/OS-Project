@@ -3,8 +3,6 @@
 
 # Ignore your debug script
 debug.sh
-
-
 clk.out
 processes.txt
 scheduler.out
