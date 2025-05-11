@@ -1,8 +1,3 @@
-#include <ctype.h>
-#include <sys/types.h>
-#include <stdio.h>
-#include <unistd.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -22,6 +17,17 @@ typedef struct MemoryBlock
 
 MemoryBlock *memoryRoot;
 
+// Get the next power of two for buddy allocation
+int nextPowerOfTwo(int n)
+{
+    if (n <= 0)
+        return 1;
+    int power = 1;
+    while (power < n)
+        power *= 2;
+    return power;
+}
+
 // Initialize the root memory block
 void initializeMemory()
 {
@@ -34,19 +40,16 @@ void initializeMemory()
     memoryRoot->right = NULL;
 }
 
-int nextPowerOfTwo(int n)
-{
-    int power = 1;
-    while (power < n)
-        power *= 2;
-    return power;
-}
-
+// Allocate a memory block of size `size` using buddy allocation
 MemoryBlock *allocateBlock(MemoryBlock *block, int size)
 {
     size = nextPowerOfTwo(size);
 
-    if (!block->is_free || block->size < size)
+    if (block == NULL || block->size < size)
+        return NULL;
+
+    // Only fail if leaf and not free
+    if (!block->is_split && !block->is_free)
         return NULL;
 
     if (block->size == size && !block->is_split)
@@ -55,12 +58,12 @@ MemoryBlock *allocateBlock(MemoryBlock *block, int size)
         return block;
     }
 
+    // Need to split if not already
     if (!block->is_split)
     {
-        block->left = (MemoryBlock *)malloc(sizeof(MemoryBlock));
-        block->right = (MemoryBlock *)malloc(sizeof(MemoryBlock));
         int half = block->size / 2;
 
+        block->left = (MemoryBlock *)malloc(sizeof(MemoryBlock));
         block->left->start = block->start;
         block->left->size = half;
         block->left->is_free = true;
@@ -68,6 +71,7 @@ MemoryBlock *allocateBlock(MemoryBlock *block, int size)
         block->left->left = NULL;
         block->left->right = NULL;
 
+        block->right = (MemoryBlock *)malloc(sizeof(MemoryBlock));
         block->right->start = block->start + half;
         block->right->size = half;
         block->right->is_free = true;
@@ -82,13 +86,16 @@ MemoryBlock *allocateBlock(MemoryBlock *block, int size)
     if (result == NULL)
         result = allocateBlock(block->right, size);
 
-    block->is_free = block->left->is_free && block->right->is_free;
+    if (result != NULL)
+        block->is_free = block->left->is_free && block->right->is_free;
+
     return result;
 }
 
+// Try to merge free buddy blocks
 bool merge(MemoryBlock *block)
 {
-    if (!block->is_split || block->left == NULL || block->right == NULL)
+    if (!block || !block->is_split || !block->left || !block->right)
         return false;
 
     if (block->left->is_free && block->right->is_free)
@@ -104,6 +111,7 @@ bool merge(MemoryBlock *block)
     return false;
 }
 
+// Free the block starting at a given address
 bool freeBlock(MemoryBlock *block, int start)
 {
     if (block == NULL)
@@ -134,25 +142,12 @@ bool freeBlock(MemoryBlock *block, int start)
     return freed;
 }
 
-void logAllocation(int time, int pid, int start, int end, int size)
-{
-    FILE *file = fopen("memory.log", "a");
-    fprintf(file, "At time %d allocated %d bytes for process %d from %d to %d\n", time, size, pid, start, end);
-    fclose(file);
-}
-
-void logFree(int time, int pid, int start, int end, int size)
-{
-    FILE *file = fopen("memory.log", "a");
-    fprintf(file, "At time %d freed %d bytes from process %d from %d to %d\n", time, size, pid, start, end);
-    fclose(file);
-}
+// Print the current memory layout
 void printMemoryBlocks(MemoryBlock *block, int depth)
 {
     if (block == NULL)
         return;
 
-    // Indentation based on depth in the tree
     for (int i = 0; i < depth; i++)
         printf("  ");
 
@@ -163,49 +158,57 @@ void printMemoryBlocks(MemoryBlock *block, int depth)
     else
         printf("\n");
 
-    // Recursive calls for children
     printMemoryBlocks(block->left, depth + 1);
     printMemoryBlocks(block->right, depth + 1);
 }
 
-// void deallocateMemory(PCB* pcb, int current_time) {
-//     if (pcb->mem_block != NULL) {
-//         int start = pcb->mem_block->start;
-//         int size = pcb->mem_block->size;
-
-//         // Free it from the buddy system
-//         freeBlock(memoryRoot, start);
-
-//         // Log the deallocation
-//         logFree(current_time, pcb->pid, start, start + size - 1, pcb->memsize);
-
-//         // Nullify pointer
-//         pcb->mem_block = NULL;
-//     }
-// }
-
-int main(int argc, char *argv[])
+// Sample main to test allocation and deallocation
+int main()
 {
-    char message[256];
-
-    printf("Enter your size of mem to be allocated: ");
-    if (fgets(message, sizeof(message), stdin) != NULL)
-    {
-        printf("You entered: %s", message);
-    }
-    else
-    {
-        printf("Error reading input.\n");
-    }
-
+    char input[256];
     initializeMemory();
-    MemoryBlock *mem = allocateBlock(memoryRoot, atoi(message));
-    printf("\n%d\n", mem->start);
-    printf("Current Memory Layout:\n");
-    printMemoryBlocks(memoryRoot, 0);
-    freeBlock(memoryRoot, mem->start);
-    printf("Current Memory Layout:\n");
+
+    // First allocation
+    printf("Enter your size of mem to be allocated: ");
+    fgets(input, sizeof(input), stdin);
+    int size1 = atoi(input);
+    MemoryBlock *mem1 = allocateBlock(memoryRoot, size1);
+    if (mem1)
+        printf("mem1 allocated at: %d\n", mem1->start);
+    else
+        printf("Allocation failed for mem1\n");
+
     printMemoryBlocks(memoryRoot, 0);
 
-    // logAllocation();
+    // Second allocation
+    printf("\nEnter your size of mem to be allocated: ");
+    fgets(input, sizeof(input), stdin);
+    int size2 = atoi(input);
+    MemoryBlock *mem2 = allocateBlock(memoryRoot, size2);
+    if (mem2)
+        printf("mem2 allocated at: %d\n", mem2->start);
+    else
+        printf("Allocation failed for mem2\n");
+
+    printMemoryBlocks(memoryRoot, 0);
+
+    // Free mem1
+    if (mem1)
+    {
+        printf("\nFreeing mem1...\n");
+        if (!freeBlock(memoryRoot, mem1->start))
+            printf("Failed to free mem1.\n");
+        printMemoryBlocks(memoryRoot, 0);
+    }
+
+    // Free mem2
+    if (mem2)
+    {
+        printf("\nFreeing mem2...\n");
+        if (!freeBlock(memoryRoot, mem2->start))
+            printf("Failed to free mem2.\n");
+        printMemoryBlocks(memoryRoot, 0);
+    }
+
+    return 0;
 }
