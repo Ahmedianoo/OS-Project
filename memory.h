@@ -8,6 +8,7 @@
 typedef struct MemoryBlock
 {
     int start;
+    //int end;
     int size;
     bool is_free;
     bool is_split;
@@ -160,55 +161,4 @@ void printMemoryBlocks(MemoryBlock *block, int depth)
 
     printMemoryBlocks(block->left, depth + 1);
     printMemoryBlocks(block->right, depth + 1);
-}
-
-// Sample main to test allocation and deallocation
-int main()
-{
-    char input[256];
-    initializeMemory();
-
-    // First allocation
-    printf("Enter your size of mem to be allocated: ");
-    fgets(input, sizeof(input), stdin);
-    int size1 = atoi(input);
-    MemoryBlock *mem1 = allocateBlock(memoryRoot, size1);
-    if (mem1)
-        printf("mem1 allocated at: %d\n", mem1->start);
-    else
-        printf("Allocation failed for mem1\n");
-
-    printMemoryBlocks(memoryRoot, 0);
-
-    // Second allocation
-    printf("\nEnter your size of mem to be allocated: ");
-    fgets(input, sizeof(input), stdin);
-    int size2 = atoi(input);
-    MemoryBlock *mem2 = allocateBlock(memoryRoot, size2);
-    if (mem2)
-        printf("mem2 allocated at: %d\n", mem2->start);
-    else
-        printf("Allocation failed for mem2\n");
-
-    printMemoryBlocks(memoryRoot, 0);
-
-    // Free mem1
-    if (mem1)
-    {
-        printf("\nFreeing mem1...\n");
-        if (!freeBlock(memoryRoot, mem1->start))
-            printf("Failed to free mem1.\n");
-        printMemoryBlocks(memoryRoot, 0);
-    }
-
-    // Free mem2
-    if (mem2)
-    {
-        printf("\nFreeing mem2...\n");
-        if (!freeBlock(memoryRoot, mem2->start))
-            printf("Failed to free mem2.\n");
-        printMemoryBlocks(memoryRoot, 0);
-    }
-
-    return 0;
 }
