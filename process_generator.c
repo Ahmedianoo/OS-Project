@@ -64,11 +64,12 @@ int main(int argc, char *argv[])
     fgets(line, sizeof(line), file); // skipping the first line in the text file
 
     int noOfProcesses = 0;
-    while (fscanf(file, "%d  %d  %d  %d",
+    while (fscanf(file, "%d  %d  %d  %d  %d",
                   &processes[noOfProcesses].processID,
                   &processes[noOfProcesses].arrivalTime,
                   &processes[noOfProcesses].runtime,
-                  &processes[noOfProcesses].processPriority) == 4)
+                  &processes[noOfProcesses].processPriority,
+                  &processes[noOfProcesses].memorySize) == 5)
     {
         processes[noOfProcesses].remainingTime = processes[noOfProcesses].runtime;
         processes[noOfProcesses].isFirstRun = true;
