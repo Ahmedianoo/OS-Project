@@ -38,7 +38,7 @@ typedef struct PCB
     int waitingTime;              // Total time in ready queue
     int turnAroundTime;           // finishTime - arrivalTime
     float weightedTurnAroundTime; // WTA = TA / runtime
-    int memorySize;
+    int memorysize;
 } PCB;
 
 typedef struct msgbuff

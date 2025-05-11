@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
                   &processes[noOfProcesses].arrivalTime,
                   &processes[noOfProcesses].runtime,
                   &processes[noOfProcesses].processPriority,
-                  &processes[noOfProcesses].memorySize) == 5)
+                  &processes[noOfProcesses].memorysize) == 5)
     {
         processes[noOfProcesses].remainingTime = processes[noOfProcesses].runtime;
         processes[noOfProcesses].isFirstRun = true;
