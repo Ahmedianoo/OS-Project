@@ -125,7 +125,7 @@ void processFinished_handler(int signum)
             noOfprocesses--;
             noOfRec--;
 
-            if(runningProcess.remainingTime <= 0 && runningProcess.freed == 0)
+            if(runningProcess.freed == 0)
             {
                 runningProcess.freed = 1;
                 logMemoryFree(runningProcess.finishTime,runningProcess);
@@ -277,7 +277,20 @@ void SRTN_algo()
             //&& noOfRec > 0
             // if(noOfRec == 0){
 
-            // }    
+            // }   
+
+
+
+            // you can comment this if another assumpiton is allowed
+            if(runningProcess.freed == 0 && (runningProcess.remainingTime - (getClk() - runningProcess.pStart)) <= 0  )
+            {
+                runningProcess.freed = 1;
+                logMemoryFree(getClk(), runningProcess);
+                freeBlock(memoryRoot,runningProcess.memPtr->start);
+                printf("i am freed in the second level: %d\n", runningProcess.processID);
+            }       
+
+
 
             if(noOfprocesses > 0 && noOfRec == 0){
                 
@@ -297,29 +310,15 @@ void SRTN_algo()
                 contSRTN = false;
 
 
-
-                // if(runningProcess.remainingTime <= 0 && runningProcess.freed == 0)
-                // {
-                //     runningProcess.freed = 1;
-                //     logMemoryFree(runningProcess.finishTime,runningProcess);
-                //     freeBlock(memoryRoot,runningProcess.memPtr->start);
-                //     printf("i am freed in the second level: %d\n", runningProcess.processID);
-                // }   
-
-
-
                 // printf("i am here in the srtn\n");
                 if (success)
                 {
                     printf("i have succeed\n");
                     recProcess = myMsg.data;
-                    recProcess.last_scheduled_time=getClk();
-                    recProcess.memPtr=allocateBlock(memoryRoot,recProcess.memorysize);
+                    recProcess.last_scheduled_time = getClk();
+                    recProcess.memPtr = allocateBlock(memoryRoot,recProcess.memorysize);
                     logMemory(recProcess.arrivalTime,recProcess);
-
-
-
-                    printf("i am memorized: %d\n", recProcess.processID);
+                    printf("i am memorized: %d, running process remaining time: %d   %d\n", recProcess.processID, runningProcess.remainingTime,  runningProcess.processID);
                     enqueue(readyQueue, recProcess);
                 }
 
@@ -336,7 +335,7 @@ void SRTN_algo()
                     {
                         // printf("remaining time %d %d\n", runningProcess.processPID, runningProcess.remainingTime);
                         runningProcess.remainingTime = runningProcess.remainingTime - (tempclk - runningProcess.pStart);
-                        // printf("remaining time %d %d\n", runningProcess.processPID, runningProcess.remainingTime);
+                        // printf("remaining time %d %d\n", runningProcess.processID, runningProcess.remainingTime);
                         runningProcess.pStart = tempclk;
                         runningProcess.last_scheduled_time = tempclk;
                         // printf("before sigstop, i am the running process %d\n", runningProcess.processPID);
