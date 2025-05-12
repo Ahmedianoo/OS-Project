@@ -432,6 +432,8 @@ void HPF_algo() {
         if (success && msg.data.arrivalTime <= getClk())
         {
             msg.data.remainingTime = msg.data.runtime;
+            msg.data.memPtr=allocateBlock(memoryRoot,msg.data.memorysize);
+            logMemory(msg.data.arrivalTime,msg.data);
             enqueueHPF(readyQueue, msg.data);
             break;
         }
@@ -449,6 +451,8 @@ void HPF_algo() {
             if (success && msg.data.arrivalTime <= now)
             {
                 msg.data.remainingTime = msg.data.runtime;
+                msg.data.memPtr=allocateBlock(memoryRoot,msg.data.memorysize);
+                logMemory(msg.data.arrivalTime,msg.data);
                 enqueueHPF(readyQueue, msg.data);
                 printf("Time %d: Enqueued process ID=%d, priority=%d\n",
                        now, msg.data.processID, msg.data.processPriority);
@@ -504,6 +508,8 @@ void HPF_algo() {
 
             writeLog(runningProcess.finishTime, runningProcess, "finished");
             runningProcess.waitingTime = 0;
+            logMemoryFree(runningProcess.finishTime,runningProcess);
+            freeBlock(memoryRoot,runningProcess.memPtr->start);
             finishedCount++;
             cpuFree = true;
             childFinished = 0;
