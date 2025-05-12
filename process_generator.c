@@ -182,6 +182,7 @@ int main(int argc, char *argv[])
             processes[sent].forked = -1;
             processes[sent].processPPID = getpid();
             processes[sent].waitingTime=0;
+            processes[sent].freed=0;
             SendToScheduler(processes[sent]);
             sent++;
         }

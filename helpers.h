@@ -40,6 +40,7 @@ typedef struct PCB
     int turnAroundTime;           // finishTime - arrivalTime
     float weightedTurnAroundTime; // WTA = TA / runtime
     int memorysize;
+    int freed;
     MemoryBlock *memPtr;
 } PCB;
 

@@ -124,8 +124,6 @@ void processFinished_handler(int signum)
             runningProcess.remainingTime = 0;
             noOfprocesses--;
             noOfRec--;
-            logMemoryFree(runningProcess.finishTime,runningProcess);
-            freeBlock(memoryRoot,runningProcess.memPtr->start);
             printf("process #%d has started at time %d and finished at %d.\n", pid, runningProcess.startTime, runningProcess.finishTime);
             contSRTN = true;
         }
@@ -265,8 +263,13 @@ void SRTN_algo()
             //&& noOfRec > 0
             // if(noOfRec == 0){
 
-            // }
-
+            // }    
+            if(runningProcess.remainingTime<=0 && runningProcess.freed==0)
+            {
+                runningProcess.freed=1;
+                logMemoryFree(runningProcess.finishTime,runningProcess);
+                freeBlock(memoryRoot,runningProcess.memPtr->start);
+            }
             if(noOfprocesses > 0 && noOfRec == 0){
                 
                 continue;
