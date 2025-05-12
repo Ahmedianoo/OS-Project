@@ -216,10 +216,6 @@ void SRTN_algo()
 
     while (true)
     {
-
-
-  
-
         if (first)
         {
 
