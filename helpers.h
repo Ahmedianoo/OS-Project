@@ -1,4 +1,5 @@
 #include <sys/types.h> // Needed for pid_t
+#include "memory.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -39,6 +40,7 @@ typedef struct PCB
     int turnAroundTime;           // finishTime - arrivalTime
     float weightedTurnAroundTime; // WTA = TA / runtime
     int memorysize;
+    MemoryBlock *memPtr;
 } PCB;
 
 typedef struct msgbuff

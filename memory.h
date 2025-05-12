@@ -8,7 +8,6 @@
 typedef struct MemoryBlock
 {
     int start;
-    //int end;
     int size;
     bool is_free;
     bool is_split;
@@ -18,18 +17,6 @@ typedef struct MemoryBlock
 
 MemoryBlock *memoryRoot;
 
-// Get the next power of two for buddy allocation
-int nextPowerOfTwo(int n)
-{
-    if (n <= 0)
-        return 1;
-    int power = 1;
-    while (power < n)
-        power *= 2;
-    return power;
-}
-
-// Initialize the root memory block
 void initializeMemory()
 {
     memoryRoot = (MemoryBlock *)malloc(sizeof(MemoryBlock));
@@ -41,59 +28,127 @@ void initializeMemory()
     memoryRoot->right = NULL;
 }
 
-// Allocate a memory block of size `size` using buddy allocation
-MemoryBlock *allocateBlock(MemoryBlock *block, int size)
+int nextPowerOfTwo(int n)
 {
-    size = nextPowerOfTwo(size);
-
-    if (block == NULL || block->size < size)
-        return NULL;
-
-    // Only fail if leaf and not free
-    if (!block->is_split && !block->is_free)
-        return NULL;
-
-    if (block->size == size && !block->is_split)
-    {
-        block->is_free = false;
-        return block;
-    }
-
-    // Need to split if not already
-    if (!block->is_split)
-    {
-        int half = block->size / 2;
-
-        block->left = (MemoryBlock *)malloc(sizeof(MemoryBlock));
-        block->left->start = block->start;
-        block->left->size = half;
-        block->left->is_free = true;
-        block->left->is_split = false;
-        block->left->left = NULL;
-        block->left->right = NULL;
-
-        block->right = (MemoryBlock *)malloc(sizeof(MemoryBlock));
-        block->right->start = block->start + half;
-        block->right->size = half;
-        block->right->is_free = true;
-        block->right->is_split = false;
-        block->right->left = NULL;
-        block->right->right = NULL;
-
-        block->is_split = true;
-    }
-
-    MemoryBlock *result = allocateBlock(block->left, size);
-    if (result == NULL)
-        result = allocateBlock(block->right, size);
-
-    if (result != NULL)
-        block->is_free = block->left->is_free && block->right->is_free;
-
-    return result;
+    if (n <= 0)
+        return 1;
+    int power = 1;
+    while (power < n)
+        power *= 2;
+    return power;
 }
 
-// Try to merge free buddy blocks
+#define MIN_BLOCK_SIZE 8
+
+static MemoryBlock *findLarger(MemoryBlock *node, int size)
+{
+    if (!node)
+        return NULL;
+
+    if (!node->is_split)
+    {
+        return (node->is_free && node->size > size) ? node : NULL;
+    }
+    MemoryBlock *res = findLarger(node->left, size);
+    return res ? res : findLarger(node->right, size);
+}
+
+static void splitLeaf(MemoryBlock *leaf)
+{
+    int half = leaf->size / 2;
+
+    leaf->left = malloc(sizeof(MemoryBlock));
+    leaf->right = malloc(sizeof(MemoryBlock));
+
+    leaf->left->start = leaf->start;
+    leaf->left->size = half;
+    leaf->left->is_free = true;
+    leaf->left->is_split = false;
+    leaf->left->left = leaf->left->right = NULL;
+
+    leaf->right->start = leaf->start + half;
+    leaf->right->size = half;
+    leaf->right->is_free = true;
+    leaf->right->is_split = false;
+    leaf->right->left = leaf->right->right = NULL;
+
+    leaf->is_split = true;
+    leaf->is_free = false; 
+}
+
+static bool refreshFree(MemoryBlock *n)
+{
+    if (!n)
+        return true;
+    if (!n->is_split)
+        return n->is_free;
+    bool l = refreshFree(n->left);
+    bool r = refreshFree(n->right);
+    n->is_free = l && r;
+    return n->is_free;
+}
+
+static MemoryBlock *findExact(MemoryBlock *n, int sz)
+{
+    if (!n)
+        return NULL;
+    if (!n->is_split)
+        return (n->is_free && n->size == sz) ? n : NULL;
+    MemoryBlock *r = findExact(n->left, sz);
+    return r ? r : findExact(n->right, sz);
+}
+
+static void bestFitDFS(MemoryBlock *n, int sz, MemoryBlock **best)
+{
+    if (!n)
+        return;
+
+    if (!n->is_split)
+    {
+        if (n->is_free && n->size >= sz)
+        {
+            if (*best == NULL ||
+                n->size < (*best)->size ||
+                (n->size == (*best)->size && n->start > (*best)->start))
+                *best = n;
+        }
+        return;
+    }
+    bestFitDFS(n->left, sz, best);
+    bestFitDFS(n->right, sz, best);
+}
+
+MemoryBlock *allocateBlock(MemoryBlock *root, int request)
+{
+    if (!root)
+        return NULL;
+    int sz = nextPowerOfTwo(request);
+
+    MemoryBlock *leaf = findExact(root, sz);
+    if (leaf)
+    {
+        leaf->is_free = false;
+        refreshFree(root);
+        return leaf;
+    }
+
+    MemoryBlock *best = NULL;
+    bestFitDFS(root, sz, &best);
+    if (!best)
+        return NULL; 
+
+    while (best->size > sz)
+    {
+        if (best->size / 2 < MIN_BLOCK_SIZE)
+            return NULL;
+        splitLeaf(best);
+        best = best->left;
+    }
+    best->is_free = false;
+    refreshFree(root);
+    return best;
+}
+
 bool merge(MemoryBlock *block)
 {
     if (!block || !block->is_split || !block->left || !block->right)
@@ -112,38 +167,39 @@ bool merge(MemoryBlock *block)
     return false;
 }
 
-// Free the block starting at a given address
-bool freeBlock(MemoryBlock *block, int start)
+bool freeBlock(MemoryBlock *node, int start)
 {
-    if (block == NULL)
+    if (!node)
         return false;
 
-    if (!block->is_split)
+    if (!node->is_split)
     {
-        if (block->start == start && !block->is_free)
+        if (node->start == start && !node->is_free)
         {
-            block->is_free = true;
+            node->is_free = true;
             return true;
         }
         return false;
     }
 
-    bool freed = false;
-    if (block->left)
-        freed |= freeBlock(block->left, start);
-    if (block->right)
-        freed |= freeBlock(block->right, start);
+    bool freed = freeBlock(node->left, start) |
+                 freeBlock(node->right, start);
 
-    if (freed)
-        merge(block);
-
-    if (block->left && block->right)
-        block->is_free = block->left->is_free && block->right->is_free;
+    if (freed &&
+        node->left->is_free && node->right->is_free)
+    {
+        free(node->left);
+        free(node->right);
+        node->left = node->right = NULL;
+        node->is_split = false;
+        node->is_free = true;
+    }
+    else
+        node->is_free = false;
 
     return freed;
 }
 
-// Print the current memory layout
 void printMemoryBlocks(MemoryBlock *block, int depth)
 {
     if (block == NULL)

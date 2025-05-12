@@ -13,6 +13,8 @@ PCB *currentProcess;
 bool childFinished;
 FILE *logFile;
 FILE *perfFile;
+FILE *memFile;
+//MemoryBlock *memoryRoot;
 
 // Process stats
 int totalWaiting = 0; //accumulation of the waiting time.. start - arrival of each process 
@@ -58,6 +60,32 @@ void writePerformance()
     fflush(perfFile);
 }
 
+void logMemory(int time, PCB pcb) {
+    if (pcb.memPtr == NULL) return;
+    if (memFile != NULL) {
+        fprintf(memFile, "At time %d allocated %d bytes for process %d from %d to %d\n",
+                time,
+                pcb.memorysize,
+                pcb.processID,
+                pcb.memPtr->start,
+                pcb.memPtr->start + pcb.memPtr->size - 1);
+    }
+    fflush(memFile);
+}
+
+void logMemoryFree(int time, PCB pcb) {
+    if (pcb.memPtr == NULL) return;
+    if (memFile != NULL) {
+        fprintf(memFile, "At time %d freed %d bytes from process %d from %d to %d\n",
+                time,
+                pcb.memorysize,
+                pcb.processID,
+                pcb.memPtr->start,
+                pcb.memPtr->start + pcb.memPtr->size - 1);
+    }
+    fflush(memFile);
+}
+
 void processFinished_handler(int signum)
 {
 
@@ -91,13 +119,15 @@ void processFinished_handler(int signum)
             wtaArray[wtaCount++] = runningProcess.weightedTurnAroundTime;
             cpuBusyTime += runningProcess.runtime;
     
-             writeLog(runningProcess.finishTime, runningProcess, "finished");
-             runningProcess.finished = 1;
-             runningProcess.remainingTime = 0;
-             noOfprocesses--;
-             noOfRec--;
-             printf("process #%d has started at time %d and finished at %d.\n", pid, runningProcess.startTime, runningProcess.finishTime);
-             contSRTN = true;
+            writeLog(runningProcess.finishTime, runningProcess, "finished");
+            runningProcess.finished = 1;
+            runningProcess.remainingTime = 0;
+            noOfprocesses--;
+            noOfRec--;
+            logMemoryFree(runningProcess.finishTime,runningProcess);
+            freeBlock(memoryRoot,runningProcess.memPtr->start);
+            printf("process #%d has started at time %d and finished at %d.\n", pid, runningProcess.startTime, runningProcess.finishTime);
+            contSRTN = true;
         }
         else if (algorithm == HPF)
         {
@@ -163,6 +193,8 @@ void SRTN_algo()
     runningProcess.pStart = runningProcess.startTime;
     startTime = runningProcess.startTime;
     // printf("ahmedhamdasokarziada");
+    runningProcess.memPtr=allocateBlock(memoryRoot,runningProcess.memorysize);
+    logMemory(runningProcess.arrivalTime,runningProcess);
     printf("\n recieved process with id: %d\n", runningProcess.processID);
     noOfRec++;
 
@@ -258,6 +290,8 @@ void SRTN_algo()
                     printf("i have succeed\n");
                     recProcess = myMsg.data;
                     recProcess.last_scheduled_time=getClk();
+                    recProcess.memPtr=allocateBlock(memoryRoot,recProcess.memorysize);
+                    logMemory(recProcess.arrivalTime,recProcess);
                     enqueue(readyQueue, recProcess);
                 }
 
@@ -467,7 +501,6 @@ void HPF_algo() {
 
 void RR_algo(int Quantum)
 {
-    // int Quantum = 1;
     int processesCount = 0;
     int startQuantum = 100;
     int execDuration = 0;
@@ -488,6 +521,8 @@ void RR_algo(int Quantum)
                 printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
                 myMsg.data.last_scheduled_time = getClk();
                 myMsg.data.waitingTime = 0; // Initialize waiting time to 0
+                myMsg.data.memPtr=allocateBlock(memoryRoot,myMsg.data.memorysize);
+                logMemory(myMsg.data.arrivalTime,myMsg.data);
                 enqueueCirc(&myQ, myMsg.data);
                 processesCount++;
                 break;
@@ -503,7 +538,6 @@ void RR_algo(int Quantum)
                 printQueue(&myQ);
                 rotate(&myQ); // need to be checked
                 printQueue(&myQ);
-
                 pGotRem = false;
                 currentProcess = peekCurrent(&myQ);
             }
@@ -568,6 +602,8 @@ void RR_algo(int Quantum)
                         cpuBusyTime += currentProcess->runtime;
                         writeLog(currentProcess->finishTime, *currentProcess, "finished");
                         currentProcess->last_scheduled_time = getClk();
+                        logMemoryFree(currentProcess->finishTime,*currentProcess);
+                        freeBlock(memoryRoot,currentProcess->memPtr->start);
                         removeCurrent(&myQ);
                         pGotRem = true;
                         printQueue(&myQ);
@@ -591,6 +627,8 @@ void RR_algo(int Quantum)
                         printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
                         myMsg.data.last_scheduled_time = getClk();
                         myMsg.data.waitingTime = 0; // Initialize waiting time to 0
+                        myMsg.data.memPtr=allocateBlock(memoryRoot,myMsg.data.memorysize);
+                        logMemory(myMsg.data.arrivalTime,myMsg.data);
                         enqueueCirc(&myQ, myMsg.data);
                         processesCount++;
                     }
@@ -606,6 +644,7 @@ void RR_algo(int Quantum)
             break;
         }
     }
+    free(currentProcess);
 }
 
 int main(int argc, char *argv[])
@@ -615,23 +654,21 @@ int main(int argc, char *argv[])
 
     logFile = fopen("scheduler.log", "w");
     perfFile = fopen("scheduler.perf", "w");
+    memFile = fopen("memory.log", "w");
 
-    if (!logFile || !perfFile)
+    if (!logFile || !perfFile || !memFile)
     {
         perror("Error opening log or performance file");
         return 1;
     }
-
+    initializeMemory();
     initClk();
     InitComGentoScheduler();
     signal(SIGUSR1, processFinished_handler);
     noOfprocesses = atoi(argv[2]);
 
-    // enum algorithms algorithm;
     int Quantum = atoi(argv[3]);
     algorithm = atoi(argv[1]);
-    // while (true)
-    // {
 
     printf("\n recieved the algorithm: %d", algorithm);
 
@@ -658,15 +695,13 @@ int main(int argc, char *argv[])
         default:
             break;
     }
-    // }
-
     fclose(logFile);
     fclose(perfFile);
-    // TODO implement the scheduler :)
-    // Round Robin
+    fclose(memFile);
+    free(perfFile);
+    free(logFile);
+    free(memFile);
+    free(currentProcess);
     destroyClk(false);
-
     return 0;
-
-    // upon termination release the clock resources
 }
