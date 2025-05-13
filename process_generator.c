@@ -130,10 +130,10 @@ int main(int argc, char *argv[])
     schedulerID = fork();
     if (schedulerID == 0)
     {
-        char no[10]; 
+        char no[10];
         sprintf(no, "%d", noOfProcesses);
         printf("I am the schedular with PID: %d\n", getpid());
-        execl("./scheduler.out", "scheduler", algorithmToString(algorithm), no, quantum_str,"I am the schedular, the process manager has just created me", NULL);
+        execl("./scheduler.out", "scheduler", algorithmToString(algorithm), no, quantum_str, "I am the schedular, the process manager has just created me", NULL);
         perror("execl failed");
         return 0;
     }
@@ -159,7 +159,8 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    if(algorithm == SRTN){
+    if (algorithm == SRTN)
+    {
         qsort(processes, noOfProcesses, sizeof(PCB), comparePCBForSRTN);
     }
 
@@ -175,14 +176,14 @@ int main(int argc, char *argv[])
         while (sent < noOfProcesses && processes[sent].arrivalTime <= x)
 
         {
-            //printf("\nclock at send %d\n", x);
- 
+            // printf("\nclock at send %d\n", x);
+
             processes[sent].finishTime = -1;
             processes[sent].finished = 0;
             processes[sent].forked = -1;
             processes[sent].processPPID = getpid();
-            processes[sent].waitingTime=0;
-            processes[sent].freed=0;
+            processes[sent].waitingTime = 0;
+            processes[sent].freed = 0;
             SendToScheduler(processes[sent]);
             sent++;
         }
@@ -195,7 +196,7 @@ int main(int argc, char *argv[])
     pid_t sch_pid = waitpid(schedulerID, &status, 0);
     // pid_t clk_pid = waitpid(clockID, &status, 0);
     raise(SIGINT);
-    
+
     // TODO Generation Main Loop
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
