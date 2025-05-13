@@ -297,6 +297,7 @@ void SRTN_algo()
 
             if(success){
             memoryProcess = allocateBlock(memoryRoot, myMsg.data.memorysize);
+            myMsg.data.last_scheduled_time = getClk();
                 if(memoryProcess == NULL){
                     success = false;
                     enqueueN(WaitQueue, myMsg.data);
@@ -343,9 +344,9 @@ void SRTN_algo()
                 {
                     printf("i have succeed\n");
                     recProcess = myMsg.data;
-                    recProcess.last_scheduled_time = getClk();
+                    //recProcess.last_scheduled_time=getClk();
                     recProcess.memPtr = memoryProcess;
-                    logMemory(recProcess.last_scheduled_time, recProcess);
+                    logMemory(getClk(), recProcess);
                     printf("i am memorized: %d, running process remaining time: %d   %d\n", recProcess.processID, runningProcess.remainingTime,  runningProcess.processID);
                     enqueue(readyQueue, recProcess);
                 }
