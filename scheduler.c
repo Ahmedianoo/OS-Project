@@ -262,11 +262,14 @@ void SRTN_algo()
 
 
             myMsg = RecieveProcess(&success);
-            if (success)
-            {
-                noOfRec++;
-                printf("number of recieved and not finished %d\n", noOfRec);
-            }
+
+
+
+
+            //recProcess.memPtr = allocateBlock(memoryRoot,recProcess.memorysize);
+
+
+
             // printf("%d\n", noOfRec);
             // if(noOfRec == 0){
             //     printf("i am zero now no of processes");
@@ -286,8 +289,35 @@ void SRTN_algo()
                 logMemoryFree(getClk(), runningProcess);
                 freeBlock(memoryRoot,runningProcess.memPtr->start);
                 printf("i am freed in the second level: %d\n", runningProcess.processID);
+
+
             }       
 
+
+
+            if(success){
+            memoryProcess = allocateBlock(memoryRoot, myMsg.data.memorysize);
+                if(memoryProcess == NULL){
+                    success = false;
+                    enqueueN(WaitQueue, myMsg.data);
+                }
+            }
+            if(WaitQueue->front != NULL) {
+                memoryProcess = allocateBlock(memoryRoot, WaitQueue->front->pcb.memorysize);
+                if(memoryProcess != NULL){
+                    myMsg.data = dequeueN(WaitQueue);
+                    success = true;
+                }else{
+                    success = false;
+                }
+            }
+
+
+            if (success)
+            {
+                noOfRec++;
+                printf("number of recieved and not finished %d\n", noOfRec);
+            }
 
 
             if(noOfprocesses > 0 && noOfRec == 0){
@@ -314,8 +344,8 @@ void SRTN_algo()
                     printf("i have succeed\n");
                     recProcess = myMsg.data;
                     recProcess.last_scheduled_time = getClk();
-                    recProcess.memPtr = allocateBlock(memoryRoot,recProcess.memorysize);
-                    logMemory(recProcess.arrivalTime,recProcess);
+                    recProcess.memPtr = memoryProcess;
+                    logMemory(recProcess.last_scheduled_time, recProcess);
                     printf("i am memorized: %d, running process remaining time: %d   %d\n", recProcess.processID, runningProcess.remainingTime,  runningProcess.processID);
                     enqueue(readyQueue, recProcess);
                 }
