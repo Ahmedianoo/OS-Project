@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
     // pid_t clk_pid = waitpid(clockID, &status, 0);
     raise(SIGINT);
 
-    // TODO Generation Main Loop
+        // TODO Generation Main Loop
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
     // 7. Clear clock resources
