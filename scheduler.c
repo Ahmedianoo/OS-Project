@@ -2,6 +2,7 @@
 #include "SRTNQueue.h"
 #include "circularqueue.h"
 #include <math.h>
+#include "Queue.h"
 
 enum algorithms algorithm;
 PCB runningProcess;
@@ -14,7 +15,8 @@ bool childFinished;
 FILE *logFile;
 FILE *perfFile;
 FILE *memFile;
-//MemoryBlock *memoryRoot;
+MemoryBlock *memoryProcess;
+PCBQueueNormal *WaitQueue;
 
 // Process stats
 int totalWaiting = 0; //accumulation of the waiting time.. start - arrival of each process 
@@ -552,10 +554,19 @@ void RR_algo(int Quantum)
                 printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
                 myMsg.data.last_scheduled_time = getClk();
                 myMsg.data.waitingTime = 0; // Initialize waiting time to 0
-                myMsg.data.memPtr=allocateBlock(memoryRoot,myMsg.data.memorysize);
-                logMemory(myMsg.data.arrivalTime,myMsg.data);
-                enqueueCirc(&myQ, myMsg.data);
-                processesCount++;
+                memoryProcess = allocateBlock(memoryRoot, myMsg.data.memorysize);
+                if (memoryProcess != NULL) {
+                    printf("Memory allocated for process %d\n", myMsg.data.processID);
+                    myMsg.data.memPtr = memoryProcess;
+                    logMemory(myMsg.data.arrivalTime, myMsg.data);
+                    enqueueCirc(&myQ, myMsg.data);
+                    processesCount++;
+                    printf("Process %d added to ready queue. Queue size: %d\n", myMsg.data.processID, processesCount);
+                } else {
+                    printf("No memory available for process %d, adding to wait queue\n", myMsg.data.processID);
+                    enqueueN(WaitQueue, myMsg.data);
+                    printf("Process %d added to wait queue. Wait queue size: %d\n", myMsg.data.processID, WaitQueue->queue_size);
+                }
                 break;
             }
         }
@@ -633,12 +644,33 @@ void RR_algo(int Quantum)
                         cpuBusyTime += currentProcess->runtime;
                         writeLog(currentProcess->finishTime, *currentProcess, "finished");
                         currentProcess->last_scheduled_time = getClk();
-                        logMemoryFree(currentProcess->finishTime,*currentProcess);
-                        freeBlock(memoryRoot,currentProcess->memPtr->start);
+                        logMemoryFree(currentProcess->finishTime, *currentProcess);
+                        freeBlock(memoryRoot, currentProcess->memPtr->start);
                         removeCurrent(&myQ);
                         pGotRem = true;
                         printQueue(&myQ);
                         processesCount--;
+
+                        // Check wait queue for processes that can now be allocated memory
+                        while (WaitQueue->queue_size > 0) {
+                            PCB waitingProcess = peekN(WaitQueue);
+                            printf("Checking wait queue for process %d (memory size: %d)\n", 
+                                   waitingProcess.processID, waitingProcess.memorysize);
+                            MemoryBlock* temp_mem = allocateBlock(memoryRoot, waitingProcess.memorysize);
+                            if (temp_mem != NULL) {
+                                printf("Memory now available for waiting process %d\n", waitingProcess.processID);
+                                waitingProcess.memPtr = temp_mem;
+                                logMemory(getClk(), waitingProcess);
+                                enqueueCirc(&myQ, waitingProcess);
+                                processesCount++;
+                                dequeueN(WaitQueue);
+                                printf("Process %d moved from wait queue to ready queue. Ready queue size: %d, Wait queue size: %d\n", 
+                                       waitingProcess.processID, processesCount, WaitQueue->queue_size);
+                            } else {
+                                printf("Still no memory available for waiting process %d\n", waitingProcess.processID);
+                                break; // No more memory available, stop checking
+                            }
+                        }
                     }
                     else
                     {
@@ -655,13 +687,21 @@ void RR_algo(int Quantum)
                     struct msgbuff myMsg = RecieveProcess(&success);
                     if (success)
                     {
-                        printf("\n recieved process with id: %d,arrival time : %d, at clock: %d\n", myMsg.data.processID, myMsg.data.arrivalTime, getClk());
+                        printf("\n received process with id: %d, arrival time: %d, at clock: %d\n", 
+                               myMsg.data.processID, myMsg.data.arrivalTime, getClk());
                         myMsg.data.last_scheduled_time = getClk();
                         myMsg.data.waitingTime = 0; // Initialize waiting time to 0
-                        myMsg.data.memPtr=allocateBlock(memoryRoot,myMsg.data.memorysize);
-                        logMemory(myMsg.data.arrivalTime,myMsg.data);
-                        enqueueCirc(&myQ, myMsg.data);
-                        processesCount++;
+                        memoryProcess = allocateBlock(memoryRoot, myMsg.data.memorysize);
+                        if (memoryProcess != NULL) {
+                            printf("Memory allocated for process %d\n", myMsg.data.processID);
+                            myMsg.data.memPtr = memoryProcess;
+                            logMemory(myMsg.data.arrivalTime, myMsg.data);
+                            enqueueCirc(&myQ, myMsg.data);
+                            processesCount++;
+                        } else {
+                            printf("No memory available for process %d, adding to wait queue\n", myMsg.data.processID);
+                            enqueueN(WaitQueue, myMsg.data);
+                        }
                     }
                     current_time = getClk();
                 }
@@ -695,6 +735,15 @@ int main(int argc, char *argv[])
     initializeMemory();
     initClk();
     InitComGentoScheduler();
+    
+    // Allocate memory for WaitQueue before initializing
+    WaitQueue = (PCBQueueNormal*)malloc(sizeof(PCBQueueNormal));
+    if (WaitQueue == NULL) {
+        perror("Failed to allocate memory for WaitQueue");
+        return 1;
+    }
+    initQueueN(WaitQueue);
+    
     signal(SIGUSR1, processFinished_handler);
     noOfprocesses = atoi(argv[2]);
 
