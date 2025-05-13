@@ -464,12 +464,18 @@ void HPF_algo() {
         if (success && msg.data.arrivalTime <= getClk())
         {
             msg.data.remainingTime = msg.data.runtime;
-            msg.data.memPtr=allocateBlock(memoryRoot,msg.data.memorysize);
-            logMemory(msg.data.arrivalTime,msg.data);
-            enqueueHPF(readyQueue, msg.data);
-            break;
+            memoryProcess = allocateBlock(memoryRoot, msg.data.memorysize);
+            if (memoryProcess != NULL) {
+                printf("Memory allocated for process %d\n", msg.data.processID);
+                msg.data.memPtr = memoryProcess;
+                logMemory(msg.data.arrivalTime, msg.data);
+                enqueueHPF(readyQueue, msg.data);
+                break;
+            } else {
+                printf("No memory available for process %d, adding to wait queue\n", msg.data.processID);
+                enqueueN(WaitQueue, msg.data);
+            }
         }
-        // usleep(500);
     }
 
     while (1)
@@ -483,18 +489,24 @@ void HPF_algo() {
             if (success && msg.data.arrivalTime <= now)
             {
                 msg.data.remainingTime = msg.data.runtime;
-                msg.data.memPtr=allocateBlock(memoryRoot,msg.data.memorysize);
-                logMemory(msg.data.arrivalTime,msg.data);
-                enqueueHPF(readyQueue, msg.data);
-                printf("Time %d: Enqueued process ID=%d, priority=%d\n",
-                       now, msg.data.processID, msg.data.processPriority);
+                memoryProcess = allocateBlock(memoryRoot, msg.data.memorysize);
+                if (memoryProcess != NULL) {
+                    printf("Memory allocated for process %d\n", msg.data.processID);
+                    msg.data.memPtr = memoryProcess;
+                    logMemory(msg.data.arrivalTime, msg.data);
+                    enqueueHPF(readyQueue, msg.data);
+                    printf("Time %d: Enqueued process ID=%d, priority=%d\n",
+                           now, msg.data.processID, msg.data.processPriority);
+                } else {
+                    printf("No memory available for process %d, adding to wait queue\n", msg.data.processID);
+                    enqueueN(WaitQueue, msg.data);
+                }
             }
         } while (success);
 
         // Step 2: If CPU is idle, schedule next
         if (cpuFree && !isEmptyHPF(readyQueue))
         {
-
             runningProcess = dequeueHPF(readyQueue);
             sprintf(remaining_str, "%d", runningProcess.remainingTime);
 
@@ -540,11 +552,30 @@ void HPF_algo() {
 
             writeLog(runningProcess.finishTime, runningProcess, "finished");
             runningProcess.waitingTime = 0;
-            logMemoryFree(runningProcess.finishTime,runningProcess);
-            freeBlock(memoryRoot,runningProcess.memPtr->start);
+            logMemoryFree(runningProcess.finishTime, runningProcess);
+            freeBlock(memoryRoot, runningProcess.memPtr->start);
             finishedCount++;
             cpuFree = true;
             childFinished = 0;
+
+            // Check wait queue only after memory is freed
+            if (WaitQueue->queue_size > 0) {
+                PCB waitingProcess = peekN(WaitQueue);
+                printf("Checking wait queue for process %d (memory size: %d)\n", 
+                       waitingProcess.processID, waitingProcess.memorysize);
+                memoryProcess = allocateBlock(memoryRoot, waitingProcess.memorysize);
+                if (memoryProcess != NULL) {
+                    printf("Memory now available for waiting process %d\n", waitingProcess.processID);
+                    waitingProcess.memPtr = memoryProcess;
+                    logMemory(getClk(), waitingProcess);
+                    enqueueHPF(readyQueue, waitingProcess);
+                    dequeueN(WaitQueue);
+                    printf("Process %d moved from wait queue to ready queue. Wait queue size: %d\n", 
+                           waitingProcess.processID, WaitQueue->queue_size);
+                } else {
+                    printf("Still no memory available for waiting process %d\n", waitingProcess.processID);
+                }
+            }
         }
 
         // Step 4: Exit when done
@@ -554,8 +585,6 @@ void HPF_algo() {
             finishTime = getClk();
             break;
         }
-
-        // usleep(500); // avoid busy waiting
     }
     writePerformance();
     destroyQueueHPF(readyQueue);
@@ -682,7 +711,7 @@ void RR_algo(int Quantum)
                         processesCount--;
 
                         // Check wait queue for processes that can now be allocated memory
-                        while (WaitQueue->queue_size > 0) {
+                        if (WaitQueue->queue_size > 0) {
                             PCB waitingProcess = peekN(WaitQueue);
                             printf("Checking wait queue for process %d (memory size: %d)\n", 
                                    waitingProcess.processID, waitingProcess.memorysize);
@@ -698,7 +727,6 @@ void RR_algo(int Quantum)
                                        waitingProcess.processID, processesCount, WaitQueue->queue_size);
                             } else {
                                 printf("Still no memory available for waiting process %d\n", waitingProcess.processID);
-                                break; // No more memory available, stop checking
                             }
                         }
                     }
@@ -745,7 +773,6 @@ void RR_algo(int Quantum)
             break;
         }
     }
-    free(currentProcess);
 }
 
 int main(int argc, char *argv[])
@@ -812,6 +839,8 @@ int main(int argc, char *argv[])
     free(logFile);
     free(memFile);
     free(currentProcess);
+    free(WaitQueue);
+    free(memoryProcess);
     destroyClk(false);
     return 0;
 }
