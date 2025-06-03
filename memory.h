@@ -68,12 +68,13 @@ static void splitLeaf(MemoryBlock *leaf)
 
     leaf->right->start = leaf->start + half;
     leaf->right->size = half;
+
     leaf->right->is_free = true;
     leaf->right->is_split = false;
     leaf->right->left = leaf->right->right = NULL;
 
     leaf->is_split = true;
-    leaf->is_free = false; 
+    leaf->is_free = false;
 }
 
 static bool refreshFree(MemoryBlock *n)
@@ -135,7 +136,7 @@ MemoryBlock *allocateBlock(MemoryBlock *root, int request)
     MemoryBlock *best = NULL;
     bestFitDFS(root, sz, &best);
     if (!best)
-        return NULL; 
+        return NULL;
 
     while (best->size > sz)
     {
