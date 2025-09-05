@@ -186,7 +186,7 @@ Upload your images (e.g., to `screenshots/`) and replace the paths below.
 ### 🔹 RR Timing Diagram
 <img src="https://github.com/Ahmedianoo/OS-Project/releases/download/v1.0.0/RR.jpg" width="700" alt="RR Timing Diagram"/>
 
-### 🔹 Performance Table
+### 🔹 Performance Output
 <img src="https://github.com/Ahmedianoo/OS-Project/releases/download/v1.0.0/04.png" width="700" alt="Performance Table"/>
 
 ---
