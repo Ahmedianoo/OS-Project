@@ -7,7 +7,7 @@ It simulates process creation, scheduling, context switching, and memory allocat
 
 ## 🚀 Features
 
-- **Scheduling Algorithms**:
+### 🧵 Scheduling Algorithms
 1. **Highest Priority First (HPF)**  
    - Non-preemptive  
    - Uses a priority queue (lower number = higher priority)  
@@ -24,12 +24,28 @@ It simulates process creation, scheduling, context switching, and memory allocat
    - Fixed quantum (time slice), head traverses through processes  
    - Ensures fair execution for all processes  
 
-- **Memory Management**:
-  - Implemented using the **Buddy System**
-  - Dynamically allocates and deallocates memory in powers of two
-  - Reduces fragmentation and efficiently reuses memory
+---
 
-- **IPC & Simulation**:
+### 🧩 Memory Management: Buddy System
+- Total memory size: **1024 bytes**  
+- Minimum block size: **8 bytes**  
+- Maximum block size per process: **≤ 256 bytes**  
+- Allocation rounded to the nearest power of two  
+- Efficient splitting and merging of memory blocks  
+- Processes wait in a queue if memory is full until space is freed  
+
+---
+
+## 📊 System Specifications
+- **Architecture:** Single uni-core CPU  
+- **IPC:** Message queues & signals  
+- **Language:** C  
+- **Environment:** Linux  
+- **Process requirement:** Memory size stays constant throughout execution  
+
+---
+
+## **IPC & Simulation**:
   - System V **Message Queues** for process generator → scheduler
   - **Signals** for coordination/cleanup
   - Shared simulated **clock** process (`clk.out`)
