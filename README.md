@@ -189,7 +189,7 @@ make run      # runs the process generator (will prompt for algorithm)
 
 ---
 
-## 📸 Screenshots (Placeholders)
+## 📸 Screenshots
 
 Upload your images (e.g., to `screenshots/`) and replace the paths below.
 
