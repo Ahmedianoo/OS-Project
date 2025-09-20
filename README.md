@@ -191,7 +191,6 @@ make run      # runs the process generator (will prompt for algorithm)
 
 ## 📸 Screenshots
 
-Upload your images (e.g., to `screenshots/`) and replace the paths below.
 
 ### 🔹 HPF Timing Diagram
 <img src="https://github.com/Ahmedianoo/OS-Project/releases/download/v1.0.0/HPF.jpg" width="700" alt="HPF Timing Diagram"/>
