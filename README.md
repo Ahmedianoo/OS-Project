@@ -5,7 +5,7 @@ It simulates process creation, scheduling, context switching, and memory allocat
 
 ---
 
-##  Features
+## Features
 
 ### 🧵 Scheduling Algorithms
 1. **Highest Priority First (HPF)**  
